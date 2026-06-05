@@ -1,0 +1,100 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+@plugin "daisyui" {
+  themes: gas-dark --default;
+}
+
+@plugin "daisyui/theme" {
+  name: "gas-dark";
+  default: true;
+  prefersdark: true;
+
+  --color-base-100: #0b0d14;
+  --color-base-200: #10131c;
+  --color-base-300: #161c2b;
+  --color-base-content: #c9d1e0;
+
+  --color-primary: #5b8df8;
+  --color-primary-content: #ffffff;
+
+  --color-secondary: #1e2d52;
+  --color-secondary-content: #c9d1e0;
+
+  --color-accent: #5b8df8;
+  --color-accent-content: #ffffff;
+
+  --color-neutral: #1a2035;
+  --color-neutral-content: #c9d1e0;
+
+  --color-info: #5b8df8;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-background: #0b0d14;
+  --color-foreground: #c9d1e0;
+  --color-card: #10131c;
+  --color-card-foreground: #c9d1e0;
+  --color-border: rgba(255,255,255,0.07);
+  --color-input: rgba(255,255,255,0.07);
+  --color-ring: #5b8df8;
+  --color-primary: #5b8df8;
+  --color-primary-foreground: #ffffff;
+  --color-muted: #1a2035;
+  --color-muted-foreground: #6b7a99;
+  --color-destructive: #ef4444;
+  --radius: 0.75rem;
+
+  /* sidebar tokens */
+  --color-sidebar: #10131c;
+  --color-sidebar-foreground: #c9d1e0;
+  --color-sidebar-primary: #5b8df8;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #1e2d52;
+  --color-sidebar-accent-foreground: #c9d1e0;
+  --color-sidebar-border: rgba(255,255,255,0.06);
+  --color-sidebar-ring: #5b8df8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+
+  /* Gas dark card style */
+  .gas-card {
+    background: #12161f;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 0.75rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .gas-card:hover {
+    border-color: rgba(91,141,248,0.25);
+    background: #151a26;
+  }
+  .gas-card-active {
+    background: #1a2745;
+    border-color: #3b6fd4;
+  }
+
+  /* Blue accent number */
+  .gas-num {
+    color: #5b8df8;
+    font-weight: 700;
+  }
+}
