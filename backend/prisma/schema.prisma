@@ -28,6 +28,7 @@ model users {
   overtime_detail overtime_detail[]
   overtime_permit overtime_permit[]
   performance     performance[]
+  attendance      attendance[]
 }
 
 model overtime_permit {
@@ -60,6 +61,18 @@ model overtime {
   updated_at         DateTime?         @default(now()) @db.Timestamp(6)
   overtime_permit    overtime_permit?  @relation(fields: [overtime_permit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   overtime_detail    overtime_detail[]
+}
+
+model attendance {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?   @db.Uuid
+  device_uid String?   @db.VarChar(50)
+  punch_time DateTime  @db.Timestamp(6)
+  punch_type Int?
+  created_at DateTime  @default(now()) @db.Timestamp(6)
+  users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([device_uid, punch_time])
 }
 
 model overtime_detail {

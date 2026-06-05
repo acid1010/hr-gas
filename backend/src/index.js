@@ -6,6 +6,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const membersRoutes = require("./routes/members");
 const performanceRoutes = require("./routes/performance");
+const attendanceRoutes = require("./routes/attendance");
 
 const port = process.env.PORT;
 
@@ -41,6 +42,7 @@ app.use(express.urlencoded({ limit: "5mb", extended: true }));
 app.use("/auth", authRoutes);
 app.use("/members", membersRoutes);
 app.use("/api/performance", performanceRoutes);
+app.use("/api/attendance", attendanceRoutes);
 // app.use("/overtime", overtimeRoutes);
 
 const startServer = async () => {

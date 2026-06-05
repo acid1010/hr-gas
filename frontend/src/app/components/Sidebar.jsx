@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, TrendingUp, Clock, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, TrendingUp, Clock, Fingerprint, LogOut } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/employee", label: "Employee", icon: Users, exact: true },
+  { href: "/attendance", label: "Attendance", icon: Fingerprint },
   { href: "/employee/performance", label: "Performance", icon: TrendingUp },
   { href: "/overtime", label: "Overtime", icon: Clock },
 ];
