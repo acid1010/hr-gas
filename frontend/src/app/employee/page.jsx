@@ -23,6 +23,58 @@ export default function Employee() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleExport = async () => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/members/export`, { credentials: "include" });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `employees_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setAlertStatus("error");
+      setAlertMessage(error.message);
+    }
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const text = ev.target.result;
+      const [headerLine, ...lines] = text.trim().split("\n");
+      const headers = headerLine.split(",").map((h) => h.trim());
+
+      const rows = lines
+        .filter((l) => l.trim())
+        .map((line) => {
+          const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+          return Object.fromEntries(headers.map((h, i) => [h, vals[i] || ""]));
+        });
+
+      try {
+        const res = await fetchWithAuth(`${apiBaseUrl}/members/import`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rows),
+        });
+        setAlertStatus("success");
+        setAlertMessage(`Import complete — ${res.created} created, ${res.skipped} skipped${res.errors?.length ? `, ${res.errors.length} errors` : ""}`);
+        handleData();
+      } catch (error) {
+        setAlertStatus("error");
+        setAlertMessage(error.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const handleData = async () => {
     const endPoint = `${apiBaseUrl}/members?keyword=${encodeURIComponent(keyword)}&page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`;
     try {
@@ -181,6 +233,7 @@ export default function Employee() {
             <Plus size={15} /> Create
           </button>
           <button
+            onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
             style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.3)"; }}
@@ -188,14 +241,15 @@ export default function Employee() {
           >
             <Download size={15} /> Export
           </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+          <label
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer"
             style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0" }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.3)"; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
           >
             <Upload size={15} /> Import
-          </button>
+            <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
+          </label>
         </div>
       </div>
 

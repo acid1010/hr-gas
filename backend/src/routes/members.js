@@ -119,6 +119,81 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+router.post("/import", async (req, res) => {
+  try {
+    const rows = req.body; // array of employee objects
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ message: "No data provided" });
+    }
+
+    const results = { created: 0, skipped: 0, errors: [] };
+
+    for (const row of rows) {
+      try {
+        if (!row.nik || !row.name) {
+          results.errors.push({ row, reason: "Missing nik or name" });
+          continue;
+        }
+
+        const existing = await prisma.users.findFirst({ where: { nik: row.nik } });
+        if (existing) {
+          results.skipped++;
+          continue;
+        }
+
+        await prisma.users.create({
+          data: {
+            nik: row.nik,
+            name: row.name,
+            join_date: row.join_date ? new Date(row.join_date) : null,
+            status: row.status || null,
+            section: row.section || null,
+            departement: row.departement || null,
+            worker_stats: row.worker_stats || null,
+            link_image: row.link_image || null,
+          },
+        });
+        results.created++;
+      } catch (err) {
+        results.errors.push({ row, reason: err.message });
+      }
+    }
+
+    res.status(200).json({ message: "Import complete", ...results });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+router.get("/export", async (req, res) => {
+  try {
+    const members = await prisma.users.findMany({
+      where: { deletedAt: null },
+      orderBy: { join_date: "asc" },
+    });
+
+    const headers = ["nik", "name", "join_date", "status", "section", "departement", "worker_stats", "email", "username", "role", "access"];
+    const escape = (v) => {
+      if (v == null) return "";
+      const s = String(v);
+      return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
+    const lines = [
+      headers.join(","),
+      ...members.map((m) =>
+        headers.map((h) => escape(h === "join_date" && m[h] ? new Date(m[h]).toISOString().slice(0, 10) : m[h])).join(",")
+      ),
+    ];
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename="employees_${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.status(200).send(lines.join("\n"));
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
 router.patch("/delete/:id", async (req, res) => {
   try {
     const { id } = req.params;
