@@ -58,7 +58,7 @@ router.post("/login", async (req, res) => {
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: false,
-      sameSite: "none", // Lebih fleksibel saat development
+      sameSite: "lax",
       maxAge: 20 * 60 * 1000,
     });
 
@@ -66,7 +66,7 @@ router.post("/login", async (req, res) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: false,
-      sameSite: "none", // Refresh token sebaiknya tetap sangat ketat
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

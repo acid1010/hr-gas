@@ -9,7 +9,12 @@ const performanceRoutes = require("./routes/performance");
 
 const port = process.env.PORT;
 
-const allowedOrigin = ["http://localhost:3000", "http://36.93.58.122:3040"];
+const allowedOrigin = [
+  "http://localhost:3000",
+  "http://localhost:3040",
+  "http://192.128.66.69:3040",
+  "http://36.93.58.122:3040",
+];
 const optionsCors = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
