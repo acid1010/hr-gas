@@ -1,0 +1,6 @@
+node_modules
+.pm2-backend-hr
+# Keep environment variables out of version control
+.env
+
+/src/generated/prisma
