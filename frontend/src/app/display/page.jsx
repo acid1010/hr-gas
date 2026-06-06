@@ -13,6 +13,13 @@ const DEPT_COLORS = {
 };
 function deptColor(d) { return DEPT_COLORS[(d || "").toLowerCase()] || "#4a5568"; }
 
+function getDrivePreview(url) {
+  if (!url) return "";
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const fileId = match ? match[1] : null;
+  return fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=s400` : url;
+}
+
 const RANK_META = [
   { color: "#f59e0b", glow: "rgba(245,158,11,0.18)", label: "#1" },
   { color: "#94a3b8", glow: "rgba(148,163,184,0.12)", label: "#2" },
@@ -94,8 +101,18 @@ function SpotlightCard({ emp, rank = 1 }) {
 
         {/* Name + dept */}
         <div className="mt-8 mb-6">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black text-white mb-4" style={{ background: deptColor(emp.departement) }}>
-            {(emp.name || "?")[0].toUpperCase()}
+          <div className="relative w-14 h-14 rounded-2xl overflow-hidden mb-4" style={{ background: deptColor(emp.departement) }}>
+            <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-white">
+              {(emp.name || "?")[0].toUpperCase()}
+            </div>
+            {emp.link_image && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={getDrivePreview(emp.link_image)}
+                alt={emp.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
           </div>
           <h2 className="font-black text-white leading-tight mb-2" style={{ fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)" }}>
             {emp.name}
@@ -172,8 +189,14 @@ function RankRow({ emp, rank, index }) {
       </div>
 
       {/* Avatar */}
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0" style={{ background: deptColor(emp.departement) }}>
-        {(emp.name || "?")[0].toUpperCase()}
+      <div className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0" style={{ background: deptColor(emp.departement) }}>
+        <div className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">
+          {(emp.name || "?")[0].toUpperCase()}
+        </div>
+        {emp.link_image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={getDrivePreview(emp.link_image)} alt={emp.name} className="absolute inset-0 w-full h-full object-cover" />
+        )}
       </div>
 
       {/* Name + dept */}
