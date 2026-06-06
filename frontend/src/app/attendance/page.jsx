@@ -7,6 +7,7 @@ import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet, Activity, Users, Clock } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
+import { toast } from "@/lib/toast";
 
 const fmt = (ts, opts) => new Date(ts).toLocaleString("id-ID", opts);
 
@@ -50,8 +51,7 @@ export default function Attendance() {
   const [date,        setDate]        = useState(today);
   const [syncing,     setSyncing]     = useState(false);
   const [deviceStatus,setDeviceStatus]= useState(null);
-  const [syncResult,  setSyncResult]  = useState(null);
-  const [loading,     setLoading]     = useState(false);
+    const [loading,     setLoading]     = useState(false);
   const [lastSynced,  setLastSynced]  = useState(null);
   const autoSyncRef = useRef(null);
 
@@ -81,14 +81,18 @@ export default function Attendance() {
   };
 
   const doSync = async (silent = false) => {
-    if (!silent) { setSyncing(true); setSyncResult(null); }
+    if (!silent) setSyncing(true);
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/api/attendance/sync`, { method: "POST" });
-      if (!silent) setSyncResult(res);
+      if (!silent) {
+        const type = res.synced > 0 ? "success" : "info";
+        const msg = `${res.message} — ${res.synced} ${t("attendance.syncResult")}${res.skipped > 0 ? `, ${res.skipped} ${t("attendance.syncSkipped")}` : ""}`;
+        toast(msg, type);
+      }
       setLastSynced(new Date());
       fetchRecords(1);
     } catch (err) {
-      if (!silent) setSyncResult({ message: err.message, synced: 0 });
+      if (!silent) toast(err.message, "error");
     } finally {
       if (!silent) setSyncing(false);
     }
@@ -184,27 +188,6 @@ export default function Attendance() {
           </div>
         </motion.div>
 
-        {/* SYNC RESULT */}
-        <AnimatePresence>
-          {syncResult && (
-            <motion.div
-              key="syncResult"
-              initial={{ opacity: 0, y: -8, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.28 }}
-              className="mb-5 px-4 py-3 rounded-xl text-sm font-medium overflow-hidden"
-              style={{
-                background: syncResult.synced > 0 ? "rgba(34,197,94,0.08)"  : "rgba(91,141,248,0.08)",
-                border: `1px solid ${syncResult.synced > 0 ? "rgba(34,197,94,0.22)" : "rgba(91,141,248,0.22)"}`,
-                color:  syncResult.synced > 0 ? "#22c55e" : "#5b8df8",
-              }}
-            >
-              {syncResult.message} — {syncResult.synced} {t("attendance.syncResult")}
-              {syncResult.skipped > 0 && `, ${syncResult.skipped} ${t("attendance.syncSkipped")}`}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* STAT CHIPS — 4×1 bento, zero gaps */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
