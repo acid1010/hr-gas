@@ -1,33 +1,48 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
-import StatChip from "../components/StatChip";
-import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet, Activity, Users, Clock } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 const fmt = (ts, opts) => new Date(ts).toLocaleString("id-ID", opts);
+
+const rowVariants = {
+  hidden:  { opacity: 0, y: 5 },
+  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.028, duration: 0.32, ease: [0.22, 1, 0.36, 1] } }),
+};
+
+function ChartTooltip({ active, payload, label, bg, text }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: bg, border: "1px solid rgba(91,141,248,0.3)", borderRadius: 10, padding: "8px 14px", color: text, fontSize: 12, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
+      <div style={{ color: "#5b8df8", marginBottom: 2 }}>{label}:00</div>
+      <div>{payload[0].value} punches</div>
+    </div>
+  );
+}
 
 export default function Attendance() {
   const { t, p } = useAppSettings();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [records, setRecords] = useState([]);
-  const [totalPages, setTotalPages] = useState(1);
+  const [records,     setRecords]     = useState([]);
+  const [totalPages,  setTotalPages]  = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [date, setDate] = useState(today);
-  const [syncing, setSyncing] = useState(false);
-  const [deviceStatus, setDeviceStatus] = useState(null);
-  const [syncResult, setSyncResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [lastSynced, setLastSynced] = useState(null);
+  const [total,       setTotal]       = useState(0);
+  const [date,        setDate]        = useState(today);
+  const [syncing,     setSyncing]     = useState(false);
+  const [deviceStatus,setDeviceStatus]= useState(null);
+  const [syncResult,  setSyncResult]  = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [lastSynced,  setLastSynced]  = useState(null);
   const autoSyncRef = useRef(null);
 
   const punchLabel = (type) => {
-    if (type === 0) return { label: t("attendance.checkIn"), color: "#22c55e" };
+    if (type === 0) return { label: t("attendance.checkIn"),  color: "#22c55e" };
     if (type === 1) return { label: t("attendance.checkOut"), color: "#5b8df8" };
     return { label: t("attendance.unknown"), color: "#6b7a99" };
   };
@@ -67,16 +82,16 @@ export default function Attendance() {
 
   useEffect(() => { fetchRecords(1); }, [fetchRecords]);
   useEffect(() => { checkDevice(); }, []);
-
   useEffect(() => {
     autoSyncRef.current = setInterval(() => doSync(true), 5 * 60 * 1000);
     return () => clearInterval(autoSyncRef.current);
   }, []);
 
-  const presentSet = new Set(records.filter(r => r.user_id).map(r => r.user_id));
-  const times = records.map(r => new Date(r.punch_time).getTime());
-  const firstPunch = times.length ? fmt(Math.min(...times), { hour: "2-digit", minute: "2-digit" }) : "—";
-  const lastPunch = times.length ? fmt(Math.max(...times), { hour: "2-digit", minute: "2-digit" }) : "—";
+  const presentSet  = new Set(records.filter(r => r.user_id).map(r => r.user_id));
+  const times       = records.map(r => new Date(r.punch_time).getTime());
+  const firstPunch  = times.length ? fmt(Math.min(...times), { hour: "2-digit", minute: "2-digit" }) : "—";
+  const lastPunch   = times.length ? fmt(Math.max(...times), { hour: "2-digit", minute: "2-digit" }) : "—";
+  const sinceMins   = lastSynced ? Math.round((Date.now() - lastSynced.getTime()) / 60000) : null;
 
   const hourMap = {};
   for (let h = 6; h <= 22; h++) hourMap[h] = 0;
@@ -84,12 +99,7 @@ export default function Attendance() {
     const h = new Date(r.punch_time).getHours();
     if (hourMap[h] !== undefined) hourMap[h]++;
   }
-  const hourlyData = Object.entries(hourMap).map(([h, count]) => ({
-    hour: `${String(h).padStart(2, "0")}`,
-    punches: count,
-  }));
-
-  const sinceMins = lastSynced ? Math.round((Date.now() - lastSynced.getTime()) / 60000) : null;
+  const hourlyData = Object.entries(hourMap).map(([h, cnt]) => ({ hour: String(h).padStart(2, "0"), punches: cnt }));
 
   const handleDownloadReport = async () => {
     const reportMonth = date.slice(0, 7);
@@ -97,176 +107,294 @@ export default function Attendance() {
       const res = await fetch(`${apiBaseUrl}/api/attendance/report/excel?month=${reportMonth}`, { credentials: "include" });
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `laporan_hr_${reportMonth}.xlsx`;
-      a.click();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url; a.download = `laporan_hr_${reportMonth}.xlsx`; a.click();
       URL.revokeObjectURL(url);
     } catch (err) { console.error(err); }
   };
 
+  const statItems = [
+    { label: t("attendance.totalPunches"),    value: total,           accent: "#5b8df8", Icon: Activity, isText: false },
+    { label: t("attendance.uniqueEmployees"), value: presentSet.size, accent: "#22c55e", Icon: Users,    isText: false },
+    { label: t("attendance.firstPunch"),      value: firstPunch,      accent: p.text,    Icon: Clock,    isText: true  },
+    { label: t("attendance.lastPunch"),       value: lastPunch,       accent: p.muted,   Icon: Clock,    isText: true  },
+  ];
+
   return (
-    <div className="p-8 min-h-screen transition-colors duration-200" style={{ background: p.pageBg }}>
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: p.primary }}>{t("attendance.subtitle")}</p>
-          <h1 className="text-2xl font-black tracking-tight" style={{ color: p.text }}>{t("attendance.title")}</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          {sinceMins !== null && (
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: p.faint }}>
-              <span className="w-2 h-2 rounded-full" style={{ background: "#22c55e", boxShadow: "0 0 4px #22c55e" }} />
-              {t("attendance.lastSynced")} {sinceMins === 0 ? t("attendance.justNow") : `${sinceMins}${t("attendance.minutesAgo")}`}
-            </div>
-          )}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
-            {deviceStatus === true && <><Wifi size={13} style={{ color: "#22c55e" }} /><span style={{ color: "#22c55e" }}>{t("attendance.deviceOnline")}</span></>}
-            {deviceStatus === false && <><WifiOff size={13} style={{ color: "#ef4444" }} /><span style={{ color: "#ef4444" }}>{t("attendance.deviceOffline")}</span></>}
-            {deviceStatus === null && <span style={{ color: p.faint }}>{t("attendance.checking")}</span>}
+    <main className="overflow-x-hidden w-full max-w-full">
+      <div className="p-8 min-h-screen transition-colors duration-300" style={{ background: p.pageBg }}>
+
+        {/* HEADER */}
+        <motion.div
+          initial={{ opacity: 0, y: -18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-8 flex items-end justify-between gap-6 flex-wrap"
+        >
+          <div>
+            <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-1.5" style={{ color: p.primary }}>
+              {t("attendance.subtitle")}
+            </p>
+            <h1 className="text-[2rem] font-black tracking-tight leading-none" style={{ color: p.text }}>
+              {t("attendance.title")}
+            </h1>
           </div>
-          <button
-            onClick={() => doSync(false)}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white transition-all"
-            style={{ background: syncing ? "#1e2d52" : "#3b6fd4" }}
-            onMouseEnter={e => { if (!syncing) e.currentTarget.style.background = "#2f5cb8"; }}
-            onMouseLeave={e => { if (!syncing) e.currentTarget.style.background = "#3b6fd4"; }}
-          >
-            <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
-            {syncing ? t("attendance.syncing") : t("attendance.syncDevice")}
-          </button>
-        </div>
-      </div>
 
-      {syncResult && (
-        <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{
-          background: syncResult.synced > 0 ? "rgba(34,197,94,0.1)" : "rgba(91,141,248,0.08)",
-          border: `1px solid ${syncResult.synced > 0 ? "rgba(34,197,94,0.2)" : "rgba(91,141,248,0.15)"}`,
-          color: syncResult.synced > 0 ? "#22c55e" : "#5b8df8",
-        }}>
-          {syncResult.message} — {syncResult.synced} {t("attendance.syncResult")}
-          {syncResult.skipped > 0 && `, ${syncResult.skipped} ${t("attendance.syncSkipped")}`}
-        </div>
-      )}
-
-      {/* Stat chips */}
-      <div className="flex gap-4 mb-4">
-        <StatChip label={t("attendance.totalPunches")} value={total} color="#5b8df8" />
-        <StatChip label={t("attendance.uniqueEmployees")} value={presentSet.size} color="#22c55e" />
-        <StatChip label={t("attendance.firstPunch")} value={firstPunch} color={p.text} />
-        <StatChip label={t("attendance.lastPunch")} value={lastPunch} color={p.text} />
-      </div>
-
-      {/* Hourly chart */}
-      <div className="rounded-xl p-4 mb-4 transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
-        <p className="text-xs font-bold tracking-widest uppercase mb-3" style={{ color: p.faint }}>{t("attendance.punchesByHour")}</p>
-        <ResponsiveContainer width="100%" height={110}>
-          <BarChart data={hourlyData} margin={{ top: 0, right: 0, bottom: 0, left: -25 }}>
-            <XAxis dataKey="hour" tick={{ fill: p.faint, fontSize: 10 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: p.faint, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip
-              contentStyle={{ background: p.cardBg, border: `1px solid rgba(91,141,248,0.2)`, borderRadius: 8, color: p.text, fontSize: 12 }}
-              cursor={{ fill: "rgba(91,141,248,0.08)" }}
-            />
-            <Bar dataKey="punches" fill="#5b8df8" radius={[3, 3, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Toolbar */}
-      <div className="rounded-xl p-4 mb-4 flex flex-wrap items-center gap-3 justify-between transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: p.faint }} />
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="pl-8 pr-4 py-2 rounded-lg text-sm outline-none"
-              style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text, colorScheme: "dark" }}
-            />
-          </div>
-          <button
-            onClick={() => fetchRecords(1)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
-            style={{ background: "#3b6fd4" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#2f5cb8"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#3b6fd4"; }}
-          >
-            <Search size={14} /> {t("common.filter")}
-          </button>
-          <button
-            onClick={handleDownloadReport}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
-            style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.3)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; }}
-          >
-            <FileSpreadsheet size={14} /> {t("attendance.monthlyReport")}
-          </button>
-        </div>
-        <span className="text-xs" style={{ color: p.faint }}>{total} {t("attendance.records")} {t("attendance.on")} {date}</span>
-      </div>
-
-      {/* Table */}
-      <div className="rounded-xl overflow-hidden transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
-        <table className="w-full text-sm">
-          <thead style={{ position: "sticky", top: 0, zIndex: 10, background: p.cardBg }}>
-            <tr style={{ borderBottom: `1px solid ${p.border}` }}>
-              {[t("attendance.columns.nik"), t("attendance.columns.name"), t("attendance.columns.department"), t("attendance.columns.date"), t("attendance.columns.time"), t("attendance.columns.type")].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: p.faint }}>{t("common.loading")}</td></tr>
-            ) : records.length > 0 ? records.map((rec, i) => {
-              const punch = punchLabel(rec.punch_type);
-              const isUnregistered = !rec.user_id;
-              return (
-                <tr
-                  key={rec.id}
-                  style={{ borderBottom: `1px solid ${p.border}`, opacity: isUnregistered ? 0.45 : 1, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
-                  onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; e.currentTarget.style.opacity = "1"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; e.currentTarget.style.opacity = isUnregistered ? "0.45" : "1"; }}
-                >
-                  <td className="px-4 py-3 font-mono text-xs" style={{ color: "#5b8df8" }}>{rec.users?.nik || rec.device_uid}</td>
-                  <td className="px-4 py-3 font-medium" style={{ color: isUnregistered ? p.faint : p.text }}>
-                    {rec.users?.name || t("attendance.unregistered")}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: p.muted }}>{rec.users?.departement?.toUpperCase() || "—"}</td>
-                  <td className="px-4 py-3" style={{ color: p.muted }}>{fmt(rec.punch_time, { day: "2-digit", month: "short", year: "numeric" })}</td>
-                  <td className="px-4 py-3 font-mono font-bold" style={{ color: p.text }}>{fmt(rec.punch_time, { hour: "2-digit", minute: "2-digit" })}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded text-xs font-semibold" style={{ background: `${punch.color}18`, color: punch.color }}>{punch.label}</span>
-                  </td>
-                </tr>
-              );
-            }) : (
-              <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: p.faint }}>{t("attendance.noRecords")} {date}. {t("attendance.trySync")}</td></tr>
+          <div className="flex items-center gap-3 flex-wrap">
+            {sinceMins !== null && (
+              <div className="flex items-center gap-1.5 text-xs" style={{ color: p.faint }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e", boxShadow: "0 0 5px #22c55e88" }} />
+                {t("attendance.lastSynced")} {sinceMins === 0 ? t("attendance.justNow") : `${sinceMins}${t("attendance.minutesAgo")}`}
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
-            <button
-              key={pg}
-              onClick={() => fetchRecords(pg)}
-              className="w-8 h-8 rounded-lg text-sm font-semibold transition-all"
-              style={pg === currentPage ? { background: "#3b6fd4", color: "#fff" } : { background: p.inputBg, color: p.faint, border: `1px solid ${p.border2}` }}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors duration-300" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
+              {deviceStatus === true  && <><Wifi    size={13} style={{ color: "#22c55e" }} /><span style={{ color: "#22c55e" }}>{t("attendance.deviceOnline")}</span></>}
+              {deviceStatus === false && <><WifiOff size={13} style={{ color: "#ef4444" }} /><span style={{ color: "#ef4444" }}>{t("attendance.deviceOffline")}</span></>}
+              {deviceStatus === null  && <span style={{ color: p.faint }}>{t("attendance.checking")}</span>}
+            </div>
+
+            <motion.button
+              onClick={() => doSync(false)}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
+              style={{ background: syncing ? "#1e2d52" : "#3b6fd4", cursor: syncing ? "not-allowed" : "pointer" }}
+              whileHover={!syncing ? { scale: 1.02, backgroundColor: "#2f5cb8" } : {}}
+              whileTap={!syncing ? { scale: 0.97 } : {}}
+              transition={{ duration: 0.15 }}
             >
-              {pg}
-            </button>
+              <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
+              {syncing ? t("attendance.syncing") : t("attendance.syncDevice")}
+            </motion.button>
+          </div>
+        </motion.div>
+
+        {/* SYNC RESULT */}
+        <AnimatePresence>
+          {syncResult && (
+            <motion.div
+              key="syncResult"
+              initial={{ opacity: 0, y: -8, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.28 }}
+              className="mb-5 px-4 py-3 rounded-xl text-sm font-medium overflow-hidden"
+              style={{
+                background: syncResult.synced > 0 ? "rgba(34,197,94,0.08)"  : "rgba(91,141,248,0.08)",
+                border: `1px solid ${syncResult.synced > 0 ? "rgba(34,197,94,0.22)" : "rgba(91,141,248,0.22)"}`,
+                color:  syncResult.synced > 0 ? "#22c55e" : "#5b8df8",
+              }}
+            >
+              {syncResult.message} — {syncResult.synced} {t("attendance.syncResult")}
+              {syncResult.skipped > 0 && `, ${syncResult.skipped} ${t("attendance.syncSkipped")}`}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* STAT CHIPS — 4×1 bento, zero gaps */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
+          {statItems.map(({ label, value, accent, Icon, isText }, i) => (
+            <motion.div
+              key={label}
+              initial={{ opacity: 0, y: 14, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: i * 0.07, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="rounded-2xl p-5 flex items-center gap-4 transition-colors duration-300"
+              style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent}18` }}>
+                <Icon size={17} style={{ color: accent }} />
+              </div>
+              <div className="min-w-0">
+                <p className={`font-black leading-none truncate ${isText ? "text-xl" : "text-2xl"}`} style={{ color: accent }}>
+                  {value}
+                </p>
+                <p className="text-[10px] font-bold tracking-[0.15em] uppercase mt-1 truncate" style={{ color: p.faint }}>
+                  {label}
+                </p>
+              </div>
+            </motion.div>
           ))}
         </div>
-      )}
-    </div>
+
+        {/* BAR CHART */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.22, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-2xl mb-5 overflow-hidden transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        >
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
+            <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>{t("attendance.punchesByHour")}</p>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-1 rounded-full" style={{ background: "#5b8df8" }} />
+              <span className="text-[10px] font-bold" style={{ color: p.faint }}>punches / hr</span>
+            </div>
+          </div>
+          <div className="px-6 py-5">
+            <ResponsiveContainer width="100%" height={120}>
+              <BarChart data={hourlyData} margin={{ top: 2, right: 0, bottom: 0, left: -28 }}>
+                <XAxis dataKey="hour" tick={{ fill: p.faint, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}h`} />
+                <YAxis tick={{ fill: p.faint, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTooltip bg={p.cardBg} text={p.text} />} />
+                <Bar dataKey="punches" fill="#5b8df8" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* TOOLBAR */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.45 }}
+          className="mb-4 flex flex-wrap items-center gap-3 justify-between p-4 rounded-2xl transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        >
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative">
+              <Calendar size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
+                style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text, colorScheme: "dark" }}
+                onFocus={e => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.1)"; }}
+                onBlur={e =>  { e.target.style.borderColor = p.border2;  e.target.style.boxShadow = "none"; }}
+              />
+            </div>
+            <motion.button
+              onClick={() => fetchRecords(1)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
+              style={{ background: "#3b6fd4" }}
+              whileHover={{ scale: 1.02, backgroundColor: "#2f5cb8" }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.15 }}
+            >
+              <Search size={14} /> {t("common.filter")}
+            </motion.button>
+            <button
+              onClick={handleDownloadReport}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.muted }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.4)"; e.currentTarget.style.color = p.text; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; e.currentTarget.style.color = p.muted; }}
+            >
+              <FileSpreadsheet size={14} /> {t("attendance.monthlyReport")}
+            </button>
+          </div>
+          <span className="text-xs font-medium" style={{ color: p.faint }}>
+            {total} {t("attendance.records")} {t("attendance.on")} {date}
+          </span>
+        </motion.div>
+
+        {/* TABLE */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.34, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-2xl overflow-hidden transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        >
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${p.border}` }}>
+                {[t("attendance.columns.nik"), t("attendance.columns.name"), t("attendance.columns.date"), t("attendance.columns.time"), t("attendance.columns.type")].map(h => (
+                  <th key={h} className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <motion.tbody
+              initial="hidden"
+              animate="visible"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.028 } } }}
+            >
+              {loading ? (
+                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm" style={{ color: p.faint }}>{t("common.loading")}</td></tr>
+              ) : records.length > 0 ? records.map((rec, i) => {
+                const punch         = punchLabel(rec.punch_type);
+                const isUnregistered = !rec.user_id;
+                return (
+                  <motion.tr
+                    key={rec.id}
+                    custom={i}
+                    variants={rowVariants}
+                    className="transition-colors duration-150"
+                    style={{ borderBottom: `1px solid ${p.border}`, opacity: isUnregistered ? 0.45 : 1, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
+                    onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; e.currentTarget.style.opacity = "1"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; e.currentTarget.style.opacity = isUnregistered ? "0.45" : "1"; }}
+                  >
+                    {/* NIK chip */}
+                    <td className="px-5 py-3.5">
+                      <span className="font-mono text-[11px] font-bold px-2.5 py-1 rounded-lg" style={{ background: "rgba(91,141,248,0.1)", color: "#5b8df8" }}>
+                        {rec.users?.nik || rec.device_uid}
+                      </span>
+                    </td>
+
+                    {/* Name + dept */}
+                    <td className="px-5 py-3.5">
+                      <span className="font-semibold" style={{ color: isUnregistered ? p.faint : p.text }}>
+                        {rec.users?.name || t("attendance.unregistered")}
+                      </span>
+                      {rec.users?.departement && (
+                        <span className="ml-2 text-[11px] font-bold" style={{ color: p.faint }}>{rec.users.departement.toUpperCase()}</span>
+                      )}
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-5 py-3.5 text-xs" style={{ color: p.muted }}>
+                      {fmt(rec.punch_time, { day: "2-digit", month: "short", year: "numeric" })}
+                    </td>
+
+                    {/* Time — large mono */}
+                    <td className="px-5 py-3.5">
+                      <span className="font-mono font-black text-sm" style={{ color: p.text }}>
+                        {fmt(rec.punch_time, { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </td>
+
+                    {/* Punch type dot-pill */}
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold" style={{ background: `${punch.color}15`, color: punch.color }}>
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: punch.color }} />
+                        {punch.label}
+                      </span>
+                    </td>
+                  </motion.tr>
+                );
+              }) : (
+                <tr>
+                  <td colSpan={5} className="px-5 py-14 text-center text-sm" style={{ color: p.faint }}>
+                    {t("attendance.noRecords")} {date}. {t("attendance.trySync")}
+                  </td>
+                </tr>
+              )}
+            </motion.tbody>
+          </table>
+        </motion.div>
+
+        {/* PAGINATION */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1.5 mt-5">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
+              <button
+                key={pg}
+                onClick={() => fetchRecords(pg)}
+                className="w-8 h-8 rounded-lg text-xs font-bold transition-all"
+                style={pg === currentPage
+                  ? { background: "#3b6fd4", color: "#fff" }
+                  : { background: p.inputBg, color: p.faint, border: `1px solid ${p.border2}` }
+                }
+              >
+                {pg}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
