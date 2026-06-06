@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import fetchWithAuth from "@/lib/fetchWithAuth";
@@ -103,6 +103,18 @@ export default function Employee() {
   const [formData,      setFormData]      = useState({});
   const [isEdit,        setIsEdit]        = useState(false);
   const [localKeyword,  setLocalKeyword]  = useState(keyword);
+  const debounceRef = useRef(null);
+
+  // Live debounced search — fires 320ms after last keystroke
+  const handleSearchChange = (val) => {
+    setLocalKeyword(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.set("keyword", val); sp.set("page", "1");
+      router.push(`?${sp.toString()}`);
+    }, 320);
+  };
 
   const setParam = (key, val) => {
     const sp = new URLSearchParams(searchParams.toString());
@@ -296,8 +308,7 @@ export default function Employee() {
               type="text"
               placeholder={t("employee.searchPlaceholder")}
               value={localKeyword}
-              onChange={e => setLocalKeyword(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") setParam("keyword", localKeyword); }}
+              onChange={e => handleSearchChange(e.target.value)}
               style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
               onFocus={e => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.1)"; }}
               onBlur={e =>  { e.target.style.borderColor = p.border2;  e.target.style.boxShadow = "none"; }}

@@ -329,7 +329,18 @@ export default function Display() {
                     className="rounded-2xl p-4"
                     style={{ background: `${meta.color}08`, border: `1px solid ${meta.color}20` }}
                   >
-                    <span className="text-lg font-black block mb-2" style={{ color: meta.color }}>{meta.label}</span>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-lg font-black" style={{ color: meta.color }}>{meta.label}</span>
+                      <div className="relative w-9 h-9 rounded-xl overflow-hidden" style={{ background: deptColor(emp.departement) }}>
+                        <div className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">
+                          {(emp.name || "?")[0].toUpperCase()}
+                        </div>
+                        {emp.link_image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={getDrivePreview(emp.link_image)} alt={emp.name} className="absolute inset-0 w-full h-full object-cover" />
+                        )}
+                      </div>
+                    </div>
                     <p className="font-black text-white text-sm truncate leading-tight">{emp.name}</p>
                     <p className="text-[10px] font-bold uppercase tracking-wider mb-3 truncate" style={{ color: "#4a5568" }}>{emp.departement}</p>
                     <div className="flex items-center gap-2">
