@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
+  const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/display")) return NextResponse.next();
+
   const token = request.cookies.get("accessToken");
-  const isAuthPage = request.nextUrl.pathname.startsWith("/login");
+  const isAuthPage = pathname.startsWith("/login");
 
   // Jika tidak ada token dan bukan di halaman login, lempar ke login
   if (!token && !isAuthPage) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Jika sudah ada token tapi mau ke login, lempar ke dashboard
   if (token && isAuthPage) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }

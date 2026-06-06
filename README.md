@@ -143,6 +143,57 @@ Open `http://localhost:3000/login` and sign in with the credentials you seeded a
 
 ---
 
+## 4 — Docker Deployment (optional)
+
+Copy the env template and fill in secrets:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env.local
+```
+
+Then start all services with Docker Compose:
+
+```bash
+docker compose up -d --build
+```
+
+Services:
+- `postgres` — PostgreSQL 16 on port 5432
+- `redis` — Redis 7 on port 6379
+- `backend` — Express API on port 3041
+- `frontend` — Next.js on port 3000
+
+Run the attendance migration after first boot:
+
+```bash
+docker exec -i hr-postgres psql -U postgres -d hr \
+  < backend/prisma/migrations/20260605_add_attendance/migration.sql
+```
+
+---
+
+## 5 — TV Display Route
+
+Open `http://your-server:3000/display` on any browser (no login required).
+
+The display shows:
+- Live clock and date in the header
+- **Top Performers** — highest combined score (attendance × 0.6 + performance × 0.4)
+- **Needs Improvement** — lowest combined scores
+- Auto-refreshes every 5 minutes
+- Animated score bars and entrance animations via framer-motion
+
+The combined score formula:
+```
+combined_score = (attendance_rate × 0.6 + performance_rating × 0.4) × 100
+
+attendance_rate  = days_present_this_month / working_days_this_month
+performance_rating: best=1.0, good=0.75, average=0.50, worst=0.25
+```
+
+---
+
 ## API Routes
 
 | Method | Path | Description |
@@ -163,6 +214,8 @@ Open `http://localhost:3000/login` and sign in with the credentials you seeded a
 | POST | `/api/attendance/sync` | Pull logs from ZKTeco device into DB |
 | GET | `/api/attendance/summary` | Per-user days-present count by month |
 | GET | `/api/attendance/device/info` | Check device connectivity |
+| GET | `/api/attendance/report/excel` | Download monthly HR report as `.xlsx` |
+| GET | `/api/performance/leaderboard` | Combined attendance + performance ranking |
 
 ---
 

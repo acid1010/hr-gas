@@ -1394,6 +1394,345 @@ git -C /Users/acidjp/pt-gas/hr-gas push origin main
 
 ---
 
+---
+
+## Task 11: Monthly Excel Report
+
+**Files:**
+- Modify: `backend/src/routes/attendance.js` — add `/report/excel` endpoint
+- Modify: `frontend/src/app/attendance/page.jsx` — add Download Report button
+
+**Prerequisite:** `xlsx` package installed in backend (`npm install xlsx`)
+
+- [ ] **Step 1: Add Excel report endpoint to attendance router**
+
+Add this route in `backend/src/routes/attendance.js` before `module.exports`:
+
+```js
+const XLSX = require("xlsx");
+
+// GET /api/attendance/report/excel?month=YYYY-MM
+router.get("/report/excel", async (req, res) => {
+  try {
+    const { month } = req.query;
+    const now = new Date();
+    const targetMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const [year, mon] = targetMonth.split("-").map(Number);
+    const start = new Date(year, mon - 1, 1);
+    const end = new Date(year, mon, 1);
+
+    // Working days (Mon–Sat)
+    let workingDays = 0;
+    const cur = new Date(start);
+    while (cur < end) { if (cur.getDay() !== 0) workingDays++; cur.setDate(cur.getDate() + 1); }
+
+    // All active employees
+    const employees = await prisma.users.findMany({
+      where: { deletedAt: null, status: "aktif" },
+      orderBy: { name: "asc" },
+    });
+
+    // Attendance check-ins for the month
+    const checkIns = await prisma.attendance.findMany({
+      where: { punch_time: { gte: start, lt: end }, punch_type: 0, user_id: { not: null } },
+      select: { user_id: true, punch_time: true },
+    });
+
+    // Days present per user
+    const daysMap = {};
+    for (const r of checkIns) {
+      if (!daysMap[r.user_id]) daysMap[r.user_id] = new Set();
+      daysMap[r.user_id].add(r.punch_time.toISOString().slice(0, 10));
+    }
+
+    // Latest performance per user
+    const performances = await prisma.performance.findMany({ orderBy: { created_at: "desc" } });
+    const perfMap = {};
+    for (const p of performances) { if (!perfMap[p.user_id]) perfMap[p.user_id] = p; }
+
+    const ratingMap = { best: 100, good: 75, average: 50, worst: 25 };
+
+    // Build rows
+    const rows = employees.map((emp) => {
+      const daysPresent = daysMap[emp.id]?.size || 0;
+      const daysAbsent = Math.max(0, workingDays - daysPresent);
+      const attendancePct = workingDays > 0 ? Math.round((daysPresent / workingDays) * 100) : 0;
+      const perf = perfMap[emp.id];
+      const perfRating = ratingMap[perf?.status?.toLowerCase()] ?? 0;
+      const combinedScore = Math.round((attendancePct / 100 * 0.6 + perfRating / 100 * 0.4) * 100);
+
+      return {
+        NIK: emp.nik ? String(emp.nik) : "",
+        Nama: emp.name || "",
+        Departemen: emp.departement?.toUpperCase() || "",
+        Jabatan: emp.section || "",
+        "Status Kerja": emp.worker_stats?.toUpperCase() || "",
+        "Hari Kerja": workingDays,
+        "Hari Hadir": daysPresent,
+        "Hari Absen": daysAbsent,
+        "Kehadiran (%)": attendancePct,
+        "Status Performa": perf?.status?.toUpperCase() || "—",
+        "Rating Performa": perfRating,
+        "Skor Gabungan": combinedScore,
+        Keterangan: perf?.description || "",
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
+      { wch: 16 }, { wch: 14 }, { wch: 30 },
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, `Laporan ${targetMonth}`);
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="laporan_hr_${targetMonth}.xlsx"`);
+    res.status(200).send(buf);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
+```
+
+- [ ] **Step 2: Add Download Report button to attendance page**
+
+In `frontend/src/app/attendance/page.jsx`, add this import and handler:
+
+```jsx
+// Add to imports
+import { FileSpreadsheet } from "lucide-react";
+
+// Add this handler inside the component (after handleImport or similar)
+const handleDownloadReport = async () => {
+  const reportMonth = date.slice(0, 7); // YYYY-MM from selected date
+  try {
+    const res = await fetch(`${apiBaseUrl}/api/attendance/report/excel?month=${reportMonth}`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("Export failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `laporan_hr_${reportMonth}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+  }
+};
+```
+
+Add button to the toolbar row (next to the Filter button):
+
+```jsx
+<button
+  onClick={handleDownloadReport}
+  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
+  style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0" }}
+  onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.3)"; }}
+  onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+>
+  <FileSpreadsheet size={14} /> Monthly Report
+</button>
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git -C /Users/acidjp/pt-gas/hr-gas add \
+  backend/src/routes/attendance.js \
+  backend/package.json \
+  backend/package-lock.json \
+  frontend/src/app/attendance/page.jsx
+git -C /Users/acidjp/pt-gas/hr-gas commit -m "feat: add monthly Excel report endpoint and download button"
+```
+
+---
+
+## Task 12: Docker Deployment
+
+**Files:**
+- Create: `backend/Dockerfile`
+- Create: `frontend/Dockerfile`
+- Create: `docker-compose.yml` (root)
+- Create: `backend/.env.example`
+- Create: `frontend/.env.example`
+
+- [ ] **Step 1: Create `backend/Dockerfile`**
+
+```dockerfile
+FROM node:20-alpine AS base
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npx prisma generate
+EXPOSE 3041
+CMD ["node", "src/index.js"]
+```
+
+- [ ] **Step 2: Create `frontend/Dockerfile`**
+
+```dockerfile
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+- [ ] **Step 3: Add `output: "standalone"` to `frontend/next.config.mjs`**
+
+```js
+// Read the current next.config.mjs and add output: "standalone"
+// Current file likely exports a config object — add the output key:
+const nextConfig = {
+  output: "standalone",
+  // ...existing config
+};
+export default nextConfig;
+```
+
+- [ ] **Step 4: Create `docker-compose.yml` at repo root**
+
+```yaml
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hr
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: hr-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hr-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/hr?sslmode=disable
+      PORT: 3041
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH: ${JWT_REFRESH}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
+      ZK_IP: ${ZK_IP:-192.128.69.33}
+      ZK_PORT: ${ZK_PORT:-4370}
+    ports:
+      - "3041:3041"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hr-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL_PRODUCTION: http://backend:3041
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+```
+
+- [ ] **Step 5: Create `backend/.env.example`**
+
+```env
+DATABASE_URL="postgresql://postgres:changeme@localhost:5432/hr?sslmode=disable"
+PORT=3041
+JWT_SECRET="change-this-to-a-random-secret"
+JWT_REFRESH="change-this-to-another-random-secret"
+REDIS_URL="redis://:changeme@127.0.0.1:6379"
+ZK_IP=192.128.69.33
+ZK_PORT=4370
+```
+
+- [ ] **Step 6: Create `frontend/.env.example`**
+
+```env
+NEXT_PUBLIC_API_BASE_URL_PRODUCTION=http://localhost:3041
+JWT_SECRET="change-this-to-a-random-secret"
+```
+
+- [ ] **Step 7: Add `.dockerignore` to both backend and frontend**
+
+`backend/.dockerignore`:
+```
+node_modules
+.env
+*.log
+```
+
+`frontend/.dockerignore`:
+```
+node_modules
+.env
+.env.local
+.next
+*.log
+```
+
+- [ ] **Step 8: Commit**
+
+```bash
+git -C /Users/acidjp/pt-gas/hr-gas add \
+  backend/Dockerfile \
+  backend/.dockerignore \
+  backend/.env.example \
+  frontend/Dockerfile \
+  frontend/.dockerignore \
+  frontend/.env.example \
+  frontend/next.config.mjs \
+  docker-compose.yml
+git -C /Users/acidjp/pt-gas/hr-gas commit -m "feat: add Docker deployment (Dockerfile x2, docker-compose, env examples)"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage check:**

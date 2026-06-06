@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../../libs/prisma");
 const ZKLib = require("node-zklib");
+const XLSX = require("xlsx");
 
 const DEVICE_IP = process.env.ZK_IP || "192.128.69.33";
 const DEVICE_PORT = parseInt(process.env.ZK_PORT || "4370");
@@ -152,6 +153,84 @@ router.get("/summary", async (req, res) => {
     }));
 
     res.status(200).json({ month: start.toISOString().slice(0, 7), data: summary });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+// GET /attendance/report/excel?month=YYYY-MM — monthly Excel report
+router.get("/report/excel", async (req, res) => {
+  try {
+    const { month } = req.query;
+    const now = new Date();
+    const targetMonth = month || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const [year, mon] = targetMonth.split("-").map(Number);
+    const start = new Date(year, mon - 1, 1);
+    const end = new Date(year, mon, 1);
+
+    let workingDays = 0;
+    const cur = new Date(start);
+    while (cur < end) { if (cur.getDay() !== 0) workingDays++; cur.setDate(cur.getDate() + 1); }
+
+    const employees = await prisma.users.findMany({
+      where: { deletedAt: null },
+      orderBy: { name: "asc" },
+    });
+
+    const checkIns = await prisma.attendance.findMany({
+      where: { punch_time: { gte: start, lt: end }, punch_type: 0, user_id: { not: null } },
+      select: { user_id: true, punch_time: true },
+    });
+
+    const daysMap = {};
+    for (const r of checkIns) {
+      if (!daysMap[r.user_id]) daysMap[r.user_id] = new Set();
+      daysMap[r.user_id].add(r.punch_time.toISOString().slice(0, 10));
+    }
+
+    const performances = await prisma.performance.findMany({ orderBy: { created_at: "desc" } });
+    const perfMap = {};
+    for (const p of performances) { if (!perfMap[p.user_id]) perfMap[p.user_id] = p; }
+
+    const ratingMap = { best: 100, good: 75, average: 50, worst: 25 };
+
+    const rows = employees.map((emp) => {
+      const daysPresent = daysMap[emp.id]?.size || 0;
+      const daysAbsent = Math.max(0, workingDays - daysPresent);
+      const attendancePct = workingDays > 0 ? Math.round((daysPresent / workingDays) * 100) : 0;
+      const perf = perfMap[emp.id];
+      const perfRating = ratingMap[perf?.status?.toLowerCase()] ?? 0;
+      const combinedScore = Math.round((attendancePct / 100 * 0.6 + perfRating / 100 * 0.4) * 100);
+      return {
+        NIK: emp.nik ? String(emp.nik) : "",
+        Nama: emp.name || "",
+        Departemen: emp.departement?.toUpperCase() || "",
+        Jabatan: emp.section || "",
+        "Status Kerja": emp.worker_stats?.toUpperCase() || "",
+        "Hari Kerja": workingDays,
+        "Hari Hadir": daysPresent,
+        "Hari Absen": daysAbsent,
+        "Kehadiran (%)": attendancePct,
+        "Status Performa": perf?.status?.toUpperCase() || "—",
+        "Rating Performa": perfRating,
+        "Skor Gabungan": combinedScore,
+        Keterangan: perf?.description || "",
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
+      { wch: 16 }, { wch: 14 }, { wch: 30 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, `Laporan ${targetMonth}`);
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="laporan_hr_${targetMonth}.xlsx"`);
+    res.status(200).send(buf);
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
