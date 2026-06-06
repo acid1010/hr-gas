@@ -116,10 +116,10 @@ export default function Dashboard() {
   const perfAccent = kpi.avgPerf >= 80 ? "#22c55e" : kpi.avgPerf >= 60 ? "#f59e0b" : "#ef4444";
 
   const kpiItems = [
-    { label: t("dashboard.totalEmployees"), value: kpi.totalEmployees, accent: "#5b8df8", Icon: Users, sub: null },
-    { label: t("dashboard.presentToday"), value: kpi.presentToday, accent: "#22c55e", Icon: CalendarCheck, sub: `${attendanceRate}%` },
-    { label: t("dashboard.absentToday"), value: kpi.absentToday, accent: kpi.absentToday > 0 ? "#ef4444" : "#22c55e", Icon: CalendarX, sub: null },
-    { label: t("dashboard.avgPerformance"), value: kpi.avgPerf, accent: perfAccent, Icon: TrendingUp, sub: "/ 100" },
+    { label: t("dashboard.totalEmployees"), value: kpi.totalEmployees, accent: "#5b8df8", Icon: Users,         sub: null,                   bar: null },
+    { label: t("dashboard.presentToday"),   value: kpi.presentToday,   accent: "#22c55e", Icon: CalendarCheck, sub: `${attendanceRate}%`,   bar: attendanceRate },
+    { label: t("dashboard.absentToday"),    value: kpi.absentToday,    accent: kpi.absentToday > 0 ? "#ef4444" : "#22c55e", Icon: CalendarX, sub: null, bar: kpi.totalEmployees > 0 ? Math.round((kpi.absentToday / kpi.totalEmployees) * 100) : 0 },
+    { label: t("dashboard.avgPerformance"), value: kpi.avgPerf,        accent: perfAccent, Icon: TrendingUp,   sub: "/ 100",                bar: kpi.avgPerf },
   ];
 
   const marqueeItems = [
@@ -179,7 +179,7 @@ export default function Dashboard() {
 
         {/* KPI BENTO — 4 × 1 col, dense, zero gaps */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-          {kpiItems.map(({ label, value, accent, Icon, sub }, i) => (
+          {kpiItems.map(({ label, value, accent, Icon, sub, bar }, i) => (
             <motion.div
               key={label}
               custom={i}
@@ -207,7 +207,18 @@ export default function Dashboard() {
                   </span>
                   {sub && <span className="text-base font-bold pb-1" style={{ color: p.muted }}>{sub}</span>}
                 </div>
-                <p className="text-[10px] font-bold tracking-[0.18em] uppercase" style={{ color: p.faint }}>{label}</p>
+                <p className="text-[10px] font-bold tracking-[0.18em] uppercase mb-3" style={{ color: p.faint }}>{label}</p>
+                {bar !== null && (
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: `${accent}18` }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ background: accent }}
+                      initial={{ width: 0 }}
+                      animate={loaded ? { width: `${Math.min(bar, 100)}%` } : { width: 0 }}
+                      transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.09 + 0.4 }}
+                    />
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
