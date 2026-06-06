@@ -1,5 +1,23 @@
 "use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ImageOff, LinkIcon } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
+
+const DEPT_COLORS = {
+  production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
+  maintenance: "#ef4444", warehouse: "#10b981", hr: "#5b8df8",
+  ga: "#f97316", it: "#06b6d4",
+};
+function deptColor(d) { return DEPT_COLORS[(d || "").toLowerCase()] || "#4a5568"; }
+
+function getDrivePreview(url) {
+  if (!url) return "";
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const fileId = match ? match[1] : null;
+  return fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=s400` : url;
+}
 
 function Field({ label, labelStyle, children }) {
   return (
@@ -12,6 +30,22 @@ function Field({ label, labelStyle, children }) {
 
 const EmployeeForm = ({ formData, onChange }) => {
   const { p } = useAppSettings();
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError]   = useState(false);
+
+  const photoUrl   = formData?.link_image || "";
+  const previewSrc = getDrivePreview(photoUrl);
+  const name       = formData?.name || "";
+  const dept       = formData?.departement || "";
+  const initials   = name ? name.trim()[0].toUpperCase() : "?";
+  const color      = deptColor(dept);
+
+  const handleChange = (e) => onChange(e.target.name, e.target.value);
+  const handlePhotoChange = (e) => {
+    setImgLoaded(false);
+    setImgError(false);
+    onChange(e.target.name, e.target.value);
+  };
 
   const inputStyle = {
     background: p.inputBg,
@@ -34,18 +68,71 @@ const EmployeeForm = ({ formData, onChange }) => {
     display: "block",
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    onChange(name, value);
-  };
-
   const onFocus = (e) => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.1)"; };
   const onBlur  = (e) => { e.target.style.borderColor = p.border2;   e.target.style.boxShadow = "none"; };
-
   const selectStyle = { ...inputStyle, appearance: "none" };
 
   return (
     <div className="grid grid-cols-1 gap-4">
+
+      {/* Photo preview */}
+      <div className="flex items-center gap-4 p-4 rounded-2xl transition-colors duration-200" style={{ background: p.inputBg, border: `1px solid ${p.border}` }}>
+        {/* Avatar / photo */}
+        <div className="relative shrink-0 w-16 h-16 rounded-2xl overflow-hidden" style={{ background: `${color}20`, border: `1.5px solid ${color}40` }}>
+          {/* Initials fallback */}
+          <div className="absolute inset-0 flex items-center justify-center text-2xl font-black" style={{ color }}>
+            {initials}
+          </div>
+
+          {/* Actual photo overlaid when URL exists */}
+          <AnimatePresence>
+            {previewSrc && !imgError && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <motion.img
+                key={previewSrc}
+                src={previewSrc}
+                alt="Preview"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: imgLoaded ? 1 : 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="absolute inset-0 w-full h-full object-cover"
+                onLoad={() => setImgLoaded(true)}
+                onError={() => setImgError(true)}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Photo URL input */}
+        <div className="flex-1 min-w-0">
+          <label style={{ ...labelStyle, marginBottom: "0.375rem" }}>Photo URL</label>
+          <div className="relative">
+            <LinkIcon size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
+            <input
+              name="link_image"
+              type="text"
+              placeholder="Google Drive URL…"
+              value={photoUrl}
+              style={{ ...inputStyle, paddingLeft: "2rem" }}
+              onChange={handlePhotoChange}
+              onFocus={onFocus}
+              onBlur={onBlur}
+            />
+          </div>
+          {imgError && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-semibold" style={{ color: "#f59e0b" }}>
+              <ImageOff size={11} /> Preview unavailable — URL may be invalid or private
+            </div>
+          )}
+          {previewSrc && imgLoaded && !imgError && (
+            <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-semibold" style={{ color: "#22c55e" }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e" }} /> Photo loaded
+            </div>
+          )}
+        </div>
+      </div>
+
       <Field label="NIK" labelStyle={labelStyle}>
         <input
           required name="nik" type="text"
@@ -134,14 +221,6 @@ const EmployeeForm = ({ formData, onChange }) => {
         </Field>
       </div>
 
-      <Field label="Photo URL" labelStyle={labelStyle}>
-        <input
-          name="link_image" type="text" placeholder="https://..."
-          value={formData?.link_image || ""}
-          style={inputStyle} onChange={handleChange}
-          onFocus={onFocus} onBlur={onBlur}
-        />
-      </Field>
     </div>
   );
 };
