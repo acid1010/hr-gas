@@ -230,6 +230,48 @@ export default function Performance() {
           </div>
         </motion.div>
 
+        {/* KPI STRIP — performance distribution */}
+        {leaderboard.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.4 }}
+            className="grid grid-cols-4 gap-3 mb-5"
+          >
+            {[
+              { key: "best",    label: "Best",    color: "#22c55e", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.18)"   },
+              { key: "good",    label: "Good",    color: "#5b8df8", bg: "rgba(91,141,248,0.08)",  border: "rgba(91,141,248,0.18)"  },
+              { key: "average", label: "Average", color: "#f59e0b", bg: "rgba(245,158,11,0.08)",  border: "rgba(245,158,11,0.18)"  },
+              { key: "worst",   label: "Worst",   color: "#ef4444", bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.18)"   },
+            ].map(({ key, label, color, bg, border }, i) => {
+              const count = leaderboard.filter(e => (e.performance_status || "").toLowerCase() === key).length;
+              const pct   = leaderboard.length ? Math.round((count / leaderboard.length) * 100) : 0;
+              return (
+                <motion.div
+                  key={key}
+                  initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: i * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="rounded-2xl px-5 py-4 flex items-center justify-between transition-colors duration-300"
+                  style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+                >
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                      <span className="text-[10px] font-black tracking-[0.16em] uppercase" style={{ color }}>{label}</span>
+                    </div>
+                    <span className="text-2xl font-black" style={{ color }}>{count}</span>
+                    <span className="text-xs font-bold ml-1.5" style={{ color: p.faint }}>{pct}%</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: bg, border: `1px solid ${border}` }}>
+                    <span className="text-xs font-black" style={{ color }}>{pct}%</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+
         {/* TAB SWITCHER */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
