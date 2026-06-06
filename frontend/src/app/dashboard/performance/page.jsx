@@ -166,11 +166,25 @@ export default function DashboardTV() {
   const current = worst.slice(page * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE + ITEMS_PER_PAGE);
 
   /* auto-slide */
+  const [slideProgress, setSlideProgress] = useState(0);
   useEffect(() => {
-    if (pages <= 1) return;
-    const id = setInterval(() => setPage(p => (p + 1) % pages), 5000);
-    return () => clearInterval(id);
-  }, [pages]);
+    if (pages <= 1) { setSlideProgress(0); return; }
+    setSlideProgress(0);
+    const startTime = Date.now();
+    const DURATION = 5000;
+    const rafId = { current: null };
+    const tick = () => {
+      const elapsed = Date.now() - startTime;
+      setSlideProgress(Math.min(elapsed / DURATION, 1));
+      if (elapsed < DURATION) rafId.current = requestAnimationFrame(tick);
+    };
+    rafId.current = requestAnimationFrame(tick);
+    const id = setInterval(() => {
+      setPage(p => (p + 1) % pages);
+      setSlideProgress(0);
+    }, DURATION);
+    return () => { clearInterval(id); cancelAnimationFrame(rafId.current); };
+  }, [pages, page]);
 
   const date = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
@@ -256,9 +270,17 @@ export default function DashboardTV() {
       {/* PAGINATION */}
       {pages > 1 && (
         <footer
-          className="relative z-10 flex items-center justify-center gap-6 py-3 shrink-0"
+          className="relative z-10 flex flex-col gap-0 shrink-0"
           style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}
         >
+          {/* Progress bar — auto-slide timer */}
+          <div className="h-[2px] w-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <div
+              className="h-full rounded-full transition-none"
+              style={{ background: "#ef4444", width: `${slideProgress * 100}%`, opacity: 0.7 }}
+            />
+          </div>
+          <div className="flex items-center justify-center gap-6 py-3">
           <button
             onClick={() => setPage(p => Math.max(0, p - 1))}
             disabled={page === 0}
@@ -292,6 +314,7 @@ export default function DashboardTV() {
           >
             <ChevronRight size={16} />
           </button>
+          </div>
         </footer>
       )}
 

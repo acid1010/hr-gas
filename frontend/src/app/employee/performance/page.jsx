@@ -6,7 +6,7 @@ import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import PerformanceForm from "@/app/components/forms/PerformanceForm";
 import Drawer from "@/app/components/Drawer";
-import { Plus, Trash2, TrendingUp, Users, Award } from "lucide-react";
+import { Plus, Trash2, TrendingUp, Users, Award, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { toast } from "@/lib/toast";
 
@@ -157,15 +157,22 @@ export default function Performance() {
 
   const sorted = [...leaderboard].sort((a, b) => sortDir * (b[sortKey] - a[sortKey]));
 
-  const SortTh = ({ k, children }) => (
-    <th
-      className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase cursor-pointer select-none"
-      style={{ color: sortKey === k ? "#5b8df8" : p.faint }}
-      onClick={() => sort(k)}
-    >
-      {children} {sortKey === k ? (sortDir === -1 ? "↓" : "↑") : ""}
-    </th>
-  );
+  const SortTh = ({ k, children }) => {
+    const active = sortKey === k;
+    const Icon = active ? (sortDir === -1 ? ArrowDown : ArrowUp) : ArrowUpDown;
+    return (
+      <th
+        className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase cursor-pointer select-none"
+        style={{ color: active ? "#5b8df8" : p.faint }}
+        onClick={() => sort(k)}
+      >
+        <span className="inline-flex items-center gap-1">
+          {children}
+          <Icon size={10} style={{ opacity: active ? 1 : 0.45 }} />
+        </span>
+      </th>
+    );
+  };
 
   const tabs = [
     { key: "leaderboard", label: t("performance.leaderboard"), Icon: Award },
