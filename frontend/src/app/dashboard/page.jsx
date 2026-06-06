@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Users, CalendarX, TrendingUp, Clock } from "lucide-react";
+import { Users, CalendarX, TrendingUp } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
+import { useAppSettings } from "@/lib/useAppSettings";
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -16,11 +17,11 @@ function deptColor(dept) {
   return DEPT_COLORS[(dept || "").toLowerCase()] || "#4a5568";
 }
 
-function KpiCard({ icon: Icon, label, value, sub, accent = "#5b8df8" }) {
+function KpiCard({ icon: Icon, label, value, sub, accent = "#5b8df8", cardBg = "#10131c", border = "rgba(255,255,255,0.06)" }) {
   return (
     <div
-      className="rounded-xl p-5 flex flex-col gap-3"
-      style={{ background: "#10131c", border: "1px solid rgba(255,255,255,0.06)" }}
+      className="rounded-xl p-5 flex flex-col gap-3 transition-colors duration-200"
+      style={{ background: cardBg, border: `1px solid ${border}` }}
     >
       <div className="flex items-center justify-between">
         <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${accent}18` }}>
@@ -48,6 +49,7 @@ function useClock() {
 }
 
 export default function Dashboard() {
+  const { t, p } = useAppSettings();
   const clock = useClock();
   const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
@@ -110,44 +112,48 @@ export default function Dashboard() {
   const perfAccent = kpi.avgPerf >= 80 ? "#22c55e" : kpi.avgPerf >= 60 ? "#f59e0b" : "#ef4444";
 
   return (
-    <div className="p-8 min-h-screen" style={{ background: "#0b0d14" }}>
+    <div className="p-8 min-h-screen transition-colors duration-200" style={{ background: p.pageBg }}>
       {/* Header */}
       <div className="mb-8 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <p className="text-sm" style={{ color: "#6b7a99" }}>HR Portal — PT. Global Anugerah Setia</p>
-          <h1 className="text-2xl font-black text-white tracking-tight mt-0.5">{today}</h1>
+          <p className="text-sm" style={{ color: p.muted }}>{t("dashboard.subtitle")}</p>
+          <h1 className="text-2xl font-black tracking-tight mt-0.5" style={{ color: p.text }}>{today}</h1>
         </div>
-        <p className="text-3xl font-black tracking-widest font-mono" style={{ color: "#5b8df8" }}>{clock}</p>
+        <p className="text-3xl font-black tracking-widest font-mono" style={{ color: p.accent }}>{clock}</p>
       </div>
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <KpiCard icon={Users} label="Total Employees" value={kpi.totalEmployees} accent="#5b8df8" />
+        <KpiCard icon={Users} label={t("dashboard.totalEmployees")} value={kpi.totalEmployees} accent={p.accent} cardBg={p.cardBg} border={p.border} />
         <KpiCard
           icon={CalendarX}
-          label="Present Today"
+          label={t("dashboard.presentToday")}
           value={kpi.presentToday}
-          sub={kpi.totalEmployees ? `${Math.round((kpi.presentToday / kpi.totalEmployees) * 100)}% of workforce` : ""}
+          sub={kpi.totalEmployees ? `${Math.round((kpi.presentToday / kpi.totalEmployees) * 100)}${t("dashboard.ofWorkforce")}` : ""}
           accent="#22c55e"
+          cardBg={p.cardBg}
+          border={p.border}
         />
         <KpiCard
           icon={CalendarX}
-          label="Absent Today"
+          label={t("dashboard.absentToday")}
           value={kpi.absentToday}
           accent={kpi.absentToday > kpi.totalEmployees * 0.2 ? "#ef4444" : "#f59e0b"}
+          cardBg={p.cardBg}
+          border={p.border}
         />
-        <KpiCard icon={TrendingUp} label="Avg Performance" value={`${kpi.avgPerf}`} sub="out of 100" accent={perfAccent} />
+        <KpiCard icon={TrendingUp} label={t("dashboard.avgPerformance")} value={`${kpi.avgPerf}`} sub={t("dashboard.outOf")} accent={perfAccent} cardBg={p.cardBg} border={p.border} />
       </div>
 
       {/* Main grid */}
       <div className="grid grid-cols-12 gap-4">
         {/* Hourly chart */}
         <div
-          className="col-span-12 xl:col-span-7 rounded-xl p-5"
-          style={{ background: "#10131c", border: "1px solid rgba(255,255,255,0.06)" }}
+          className="col-span-12 xl:col-span-7 rounded-xl p-5 transition-colors duration-200"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
         >
-          <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: "#4a5568" }}>
-            Attendance Punches — Today
+          <p className="text-xs font-bold tracking-widest uppercase mb-4" style={{ color: p.faint }}>
+            {t("dashboard.attendanceChart")}
           </p>
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={hourlyData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
@@ -170,12 +176,12 @@ export default function Dashboard() {
 
         {/* Absent list */}
         <div
-          className="col-span-12 xl:col-span-5 rounded-xl flex flex-col"
-          style={{ background: "#10131c", border: "1px solid rgba(255,255,255,0.06)" }}
+          className="col-span-12 xl:col-span-5 rounded-xl flex flex-col transition-colors duration-200"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
         >
-          <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>
-              Absent Today
+          <div className="px-5 py-4" style={{ borderBottom: `1px solid ${p.border}` }}>
+            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>
+              {t("dashboard.absentList")}
               {absentList.length > 0 && (
                 <span className="ml-2 px-2 py-0.5 rounded text-xs font-semibold" style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}>
                   {absentList.length}
@@ -186,24 +192,21 @@ export default function Dashboard() {
           <div className="flex-1 overflow-y-auto" style={{ maxHeight: 220 }}>
             {absentList.length === 0 ? (
               <div className="flex items-center justify-center h-full py-8">
-                <p className="text-sm" style={{ color: "#4a5568" }}>All employees present</p>
+                <p className="text-sm" style={{ color: p.faint }}>{t("dashboard.allPresent")}</p>
               </div>
             ) : (
               absentList.map((emp) => (
                 <div
                   key={emp.id}
                   className="flex items-center gap-3 px-5 py-3"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                  style={{ borderBottom: `1px solid ${p.border}` }}
                 >
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white"
-                    style={{ background: deptColor(emp.departement) }}
-                  >
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white" style={{ background: deptColor(emp.departement) }}>
                     {(emp.name || "?")[0].toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{emp.name}</p>
-                    <p className="text-xs truncate" style={{ color: "#4a5568" }}>
+                    <p className="text-sm font-semibold truncate" style={{ color: p.text }}>{emp.name}</p>
+                    <p className="text-xs truncate" style={{ color: p.faint }}>
                       {emp.nik} · {emp.departement?.toUpperCase() || "—"}
                     </p>
                   </div>

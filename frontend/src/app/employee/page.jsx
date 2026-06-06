@@ -7,6 +7,7 @@ import apiBaseUrl from "@/lib/urlEndPoint";
 import EmployeeForm from "../components/forms/EmployeeForm";
 import Drawer from "../components/Drawer";
 import { Search, Plus, Download, Upload } from "lucide-react";
+import { useAppSettings } from "@/lib/useAppSettings";
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -39,7 +40,7 @@ function WsBadge({ value }) {
   );
 }
 
-function DeleteButton({ onConfirm }) {
+function DeleteButton({ label, confirmLabel, onConfirm }) {
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
     return (
@@ -49,7 +50,7 @@ function DeleteButton({ onConfirm }) {
         style={{ background: "#ef4444", color: "#fff" }}
         onMouseLeave={() => setConfirming(false)}
       >
-        Confirm?
+        {confirmLabel}
       </button>
     );
   }
@@ -61,12 +62,13 @@ function DeleteButton({ onConfirm }) {
       onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.18)"; }}
       onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; }}
     >
-      Delete
+      {label}
     </button>
   );
 }
 
 export default function Employee() {
+  const { t, p } = useAppSettings();
   const router = useRouter();
   const searchParams = useSearchParams();
   const page = Number(searchParams.get("page") || 1);
@@ -81,10 +83,10 @@ export default function Employee() {
   const [localKeyword, setLocalKeyword] = useState(keyword);
 
   const setParam = (key, val) => {
-    const p = new URLSearchParams(searchParams.toString());
-    p.set(key, val);
-    p.set("page", "1");
-    router.push(`?${p.toString()}`);
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set(key, val);
+    sp.set("page", "1");
+    router.push(`?${sp.toString()}`);
   };
 
   const showNotice = (type, msg) => {
@@ -133,7 +135,7 @@ export default function Employee() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(rows),
         });
-        showNotice("success", `Import complete — ${res.created} created, ${res.skipped} skipped`);
+        showNotice("success", `${t("employee.importComplete")} — ${res.created} ${t("employee.created")}, ${res.skipped} ${t("employee.skipped")}`);
         load();
       } catch (err) { showNotice("error", err.message); }
     };
@@ -159,7 +161,7 @@ export default function Employee() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      showNotice("success", res.message || "Employee created");
+      showNotice("success", res.message || t("employee.createEmployee"));
       setDrawerOpen(false);
       load();
     } catch (err) { showNotice("error", err.message); }
@@ -172,7 +174,7 @@ export default function Employee() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-      showNotice("success", res.message || "Employee updated");
+      showNotice("success", res.message || t("employee.saveChanges"));
       setDrawerOpen(false);
       load();
     } catch (err) { showNotice("error", err.message); }
@@ -181,7 +183,7 @@ export default function Employee() {
   const handleDelete = async (id) => {
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/members/delete/${id}`, { method: "PATCH" });
-      showNotice("success", res.message || "Employee deleted");
+      showNotice("success", res.message || t("common.delete"));
       load();
     } catch (err) { showNotice("error", err.message); }
   };
@@ -191,8 +193,7 @@ export default function Employee() {
   const end = Math.min(start + data.length - 1, total);
 
   return (
-    <div className="p-8 min-h-screen" style={{ background: "#0b0d14" }}>
-      {/* Notice */}
+    <div className="p-8 min-h-screen transition-colors duration-200" style={{ background: p.pageBg }}>
       {notice && (
         <div
           className="mb-4 px-4 py-3 rounded-lg text-sm"
@@ -206,38 +207,37 @@ export default function Employee() {
         </div>
       )}
 
-      {/* Header */}
       <div className="mb-6">
-        <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: "#3b6fd4" }}>Management</p>
-        <h1 className="text-2xl font-black text-white tracking-tight">Employee</h1>
+        <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: p.primary }}>{t("employee.subtitle")}</p>
+        <h1 className="text-2xl font-black tracking-tight" style={{ color: p.text }}>{t("employee.title")}</h1>
       </div>
 
       {/* Toolbar */}
-      <div className="rounded-xl p-4 mb-4 flex flex-wrap items-center gap-3 justify-between" style={{ background: "#10131c", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="rounded-xl p-4 mb-4 flex flex-wrap items-center gap-3 justify-between transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#4a5568" }} />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: p.faint }} />
             <input
               className="pl-8 pr-4 py-2 rounded-lg text-sm outline-none w-56"
               type="text"
-              placeholder="Search employee..."
+              placeholder={t("employee.searchPlaceholder")}
               value={localKeyword}
               onChange={e => setLocalKeyword(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") setParam("keyword", localKeyword); }}
-              style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0" }}
+              style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
             />
           </div>
           <select
             className="px-3 py-2 rounded-lg text-sm outline-none appearance-none"
-            style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0" }}
+            style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
             value={limit}
             onChange={e => setParam("limit", e.target.value)}
           >
-            {[10, 25, 50].map(n => <option key={n} value={n}>{n} / page</option>)}
+            {[10, 25, 50].map(n => <option key={n} value={n}>{n} {t("common.perPage")}</option>)}
           </select>
           {total > 0 && (
-            <span className="text-xs" style={{ color: "#4a5568" }}>
-              Showing {start}–{end} of {total} employees
+            <span className="text-xs" style={{ color: p.faint }}>
+              {t("common.showing")} {start}–{end} {t("common.of")} {total}
             </span>
           )}
         </div>
@@ -249,36 +249,36 @@ export default function Employee() {
             onMouseEnter={e => { e.currentTarget.style.background = "#2f5cb8"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#3b6fd4"; }}
           >
-            <Plus size={15} /> Create
+            <Plus size={15} /> {t("common.create")}
           </button>
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-            style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0" }}
+            style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.3)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; }}
           >
-            <Download size={15} /> Export
+            <Download size={15} /> {t("common.export")}
           </button>
           <label
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer"
-            style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0" }}
+            style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.3)"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; }}
           >
-            <Upload size={15} /> Import
+            <Upload size={15} /> {t("common.import")}
             <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
           </label>
         </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl overflow-hidden" style={{ background: "#10131c", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="rounded-xl overflow-hidden transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
         <table className="w-full text-sm">
-          <thead style={{ position: "sticky", top: 0, zIndex: 10, background: "#10131c" }}>
-            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              {["NIK", "Name", "Department", "Position", "Join Date", "Status", "Worker Status", "Action"].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>{h}</th>
+          <thead style={{ position: "sticky", top: 0, zIndex: 10, background: p.cardBg }}>
+            <tr style={{ borderBottom: `1px solid ${p.border}` }}>
+              {[t("employee.columns.nik"), t("employee.columns.name"), t("employee.columns.department"), t("employee.columns.position"), t("employee.columns.joinDate"), t("employee.columns.status"), t("employee.columns.workerStatus"), t("employee.columns.action")].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -286,9 +286,9 @@ export default function Employee() {
             {data.length > 0 ? data.map((emp, i) => (
               <tr
                 key={emp.id}
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: i % 2 === 0 ? "#10131c" : "#12161f" }}
-                onMouseEnter={e => { e.currentTarget.style.background = "#151a26"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? "#10131c" : "#12161f"; }}
+                style={{ borderBottom: `1px solid ${p.border}`, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
+                onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; }}
+                onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; }}
               >
                 <td className="px-4 py-3 font-mono text-xs" style={{ color: "#5b8df8" }}>{emp.nik}</td>
                 <td className="px-4 py-3">
@@ -296,12 +296,12 @@ export default function Employee() {
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 text-white" style={{ background: deptColor(emp.departement) }}>
                       {(emp.name || "?")[0].toUpperCase()}
                     </div>
-                    <span className="font-semibold text-white">{emp.name}</span>
+                    <span className="font-semibold" style={{ color: p.text }}>{emp.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3" style={{ color: "#c9d1e0" }}>{emp.departement?.toUpperCase()}</td>
-                <td className="px-4 py-3" style={{ color: "#c9d1e0" }}>{emp.section}</td>
-                <td className="px-4 py-3" style={{ color: "#6b7a99" }}>{emp.join_date ? new Date(emp.join_date).toLocaleDateString("id-ID") : "—"}</td>
+                <td className="px-4 py-3" style={{ color: p.muted }}>{emp.departement?.toUpperCase()}</td>
+                <td className="px-4 py-3" style={{ color: p.muted }}>{emp.section}</td>
+                <td className="px-4 py-3" style={{ color: p.faint }}>{emp.join_date ? new Date(emp.join_date).toLocaleDateString("id-ID") : "—"}</td>
                 <td className="px-4 py-3"><StatusBadge value={emp.status} /></td>
                 <td className="px-4 py-3"><WsBadge value={emp.worker_stats} /></td>
                 <td className="px-4 py-3">
@@ -313,15 +313,15 @@ export default function Employee() {
                       onMouseEnter={e => { e.currentTarget.style.background = "#253a6b"; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "#1e2d52"; }}
                     >
-                      Edit
+                      {t("common.edit")}
                     </button>
-                    <DeleteButton onConfirm={() => handleDelete(emp.id)} />
+                    <DeleteButton label={t("common.delete")} confirmLabel={t("common.confirm")} onConfirm={() => handleDelete(emp.id)} />
                   </div>
                 </td>
               </tr>
             )) : (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm" style={{ color: "#4a5568" }}>No employees found</td>
+                <td colSpan={8} className="px-4 py-12 text-center text-sm" style={{ color: p.faint }}>{t("employee.noData")}</td>
               </tr>
             )}
           </tbody>
@@ -331,21 +331,20 @@ export default function Employee() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-4">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
             <button
-              key={p}
-              onClick={() => setParam("page", p)}
+              key={pg}
+              onClick={() => setParam("page", pg)}
               className="w-8 h-8 rounded-lg text-sm font-semibold transition-all"
-              style={p === currentPage ? { background: "#3b6fd4", color: "#fff" } : { background: "#161c2b", color: "#6b7a99", border: "1px solid rgba(255,255,255,0.08)" }}
+              style={pg === currentPage ? { background: "#3b6fd4", color: "#fff" } : { background: p.inputBg, color: p.faint, border: `1px solid ${p.border2}` }}
             >
-              {p}
+              {pg}
             </button>
           ))}
         </div>
       )}
 
-      {/* Drawer */}
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={isEdit ? "Edit Employee" : "Create Employee"}>
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={isEdit ? t("employee.editTitle") : t("employee.createTitle")}>
         <form
           id="employee-form"
           onSubmit={isEdit ? (e) => { e.preventDefault(); handleUpdate(); } : handleCreate}
@@ -359,7 +358,7 @@ export default function Employee() {
             onMouseEnter={e => { e.currentTarget.style.background = "#2f5cb8"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#3b6fd4"; }}
           >
-            {isEdit ? "Save Changes" : "Create Employee"}
+            {isEdit ? t("employee.saveChanges") : t("employee.createEmployee")}
           </button>
         </form>
       </Drawer>

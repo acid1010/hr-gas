@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/app/components/Sidebar";
+import AppProviders from "@/app/components/AppProviders";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -33,19 +34,22 @@ export default async function RootLayout({ children }) {
   }
   return (
     <html
-      lang="en"
+      lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       data-theme="gas-dark"
+      suppressHydrationWarning
     >
-      <body className="min-h-screen bg-[#0b0d14]">
-        {user ? (
-          <div className="flex min-h-screen">
-            <Sidebar user={user} />
-            <main className="flex-1 ml-64 min-h-screen">{children}</main>
-          </div>
-        ) : (
-          children
-        )}
+      <body className="min-h-screen" suppressHydrationWarning>
+        <AppProviders>
+          {user ? (
+            <div className="flex min-h-screen">
+              <Sidebar user={user} />
+              <main className="flex-1 ml-64 min-h-screen">{children}</main>
+            </div>
+          ) : (
+            children
+          )}
+        </AppProviders>
       </body>
     </html>
   );

@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 @plugin "daisyui" {
-  themes: gas-dark --default;
+  themes: gas-dark --default, gas-light;
 }
 
 @plugin "daisyui/theme" {
@@ -33,6 +33,36 @@
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
+
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+}
+
+@plugin "daisyui/theme" {
+  name: "gas-light";
+  default: false;
+
+  --color-base-100: #f0f2f7;
+  --color-base-200: #ffffff;
+  --color-base-300: #e4e8f0;
+  --color-base-content: #1a2035;
+
+  --color-primary: #3b6fd4;
+  --color-primary-content: #ffffff;
+
+  --color-secondary: #dce6fb;
+  --color-secondary-content: #1a2035;
+
+  --color-accent: #3b6fd4;
+  --color-accent-content: #ffffff;
+
+  --color-neutral: #e4e8f0;
+  --color-neutral-content: #1a2035;
+
+  --color-info: #3b6fd4;
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
 
   --radius-field: 0.5rem;
   --radius-box: 0.75rem;

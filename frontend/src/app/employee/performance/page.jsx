@@ -6,6 +6,7 @@ import apiBaseUrl from "@/lib/urlEndPoint";
 import PerformanceForm from "@/app/components/forms/PerformanceForm";
 import Drawer from "@/app/components/Drawer";
 import { Plus } from "lucide-react";
+import { useAppSettings } from "@/lib/useAppSettings";
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -21,35 +22,36 @@ const PERF_STYLE = {
   worst: { bg: "rgba(239,68,68,0.12)", color: "#ef4444" },
 };
 
-function ScoreBar({ score }) {
+function ScoreBar({ score, barBg }) {
   const color = score >= 80 ? "#22c55e" : score >= 60 ? "#f59e0b" : "#ef4444";
   return (
     <div>
       <span className="text-sm font-black" style={{ color }}>{score}</span>
-      <div className="mt-1 h-1 rounded-full w-24" style={{ background: "rgba(255,255,255,0.06)" }}>
+      <div className="mt-1 h-1 rounded-full w-24" style={{ background: barBg }}>
         <div className="h-1 rounded-full" style={{ width: `${score}%`, background: color }} />
       </div>
     </div>
   );
 }
 
-function DeleteButton({ onConfirm }) {
+function DeleteButton({ label, confirmLabel, onConfirm }) {
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
     return (
       <button onClick={() => { setConfirming(false); onConfirm(); }} className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "#ef4444", color: "#fff" }} onMouseLeave={() => setConfirming(false)}>
-        Confirm?
+        {confirmLabel}
       </button>
     );
   }
   return (
     <button onClick={() => setConfirming(true)} className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.18)"; }} onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; }}>
-      Delete
+      {label}
     </button>
   );
 }
 
 export default function Performance() {
+  const { t, p } = useAppSettings();
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [month, setMonth] = useState(defaultMonth);
@@ -111,20 +113,22 @@ export default function Performance() {
   const SortTh = ({ k, label }) => (
     <th
       className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase cursor-pointer select-none"
-      style={{ color: sortKey === k ? "#5b8df8" : "#4a5568" }}
+      style={{ color: sortKey === k ? "#5b8df8" : p.faint }}
       onClick={() => sort(k)}
     >
       {label} {sortKey === k ? (sortDir === -1 ? "↓" : "↑") : ""}
     </th>
   );
 
+  const barBg = p.border2;
+
   return (
-    <div className="p-8 min-h-screen" style={{ background: "#0b0d14" }}>
+    <div className="p-8 min-h-screen transition-colors duration-200" style={{ background: p.pageBg }}>
       {/* Header */}
       <div className="mb-6 flex items-start justify-between flex-wrap gap-4">
         <div>
-          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: "#3b6fd4" }}>Leaderboard</p>
-          <h1 className="text-2xl font-black text-white tracking-tight">Performance</h1>
+          <p className="text-xs font-bold tracking-widest uppercase mb-1" style={{ color: p.primary }}>{t("performance.subtitle")}</p>
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: p.text }}>{t("performance.title")}</h1>
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -132,7 +136,7 @@ export default function Performance() {
             value={month}
             onChange={e => setMonth(e.target.value)}
             className="px-3 py-2 rounded-lg text-sm outline-none"
-            style={{ background: "#161c2b", border: "1px solid rgba(255,255,255,0.08)", color: "#c9d1e0", colorScheme: "dark" }}
+            style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text, colorScheme: "dark" }}
           />
           <button
             onClick={() => setDrawerOpen(true)}
@@ -141,19 +145,19 @@ export default function Performance() {
             onMouseEnter={e => { e.currentTarget.style.background = "#2f5cb8"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "#3b6fd4"; }}
           >
-            <Plus size={15} /> Add Record
+            <Plus size={15} /> {t("performance.addRecord")}
           </button>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4">
-        {[["leaderboard", "Leaderboard"], ["records", "Performance Records"]].map(([k, label]) => (
+        {[["leaderboard", t("performance.leaderboard")], ["records", t("performance.records")]].map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
             className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
-            style={tab === k ? { background: "#1e2d52", color: "#5b8df8" } : { color: "#6b7a99" }}
+            style={tab === k ? { background: "#1e2d52", color: "#5b8df8" } : { color: p.muted }}
           >
             {label}
           </button>
@@ -161,29 +165,29 @@ export default function Performance() {
       </div>
 
       {tab === "leaderboard" && (
-        <div className="rounded-xl overflow-hidden" style={{ background: "#10131c", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="rounded-xl overflow-hidden transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
           <table className="w-full text-sm">
-            <thead style={{ position: "sticky", top: 0, zIndex: 10, background: "#10131c" }}>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>Rank</th>
-                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>Employee</th>
-                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>Department</th>
-                <SortTh k="attendance_rate" label="Attendance %" />
-                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>Perf Rating</th>
-                <SortTh k="combined_score" label="Combined Score" />
+            <thead style={{ position: "sticky", top: 0, zIndex: 10, background: p.cardBg }}>
+              <tr style={{ borderBottom: `1px solid ${p.border}` }}>
+                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>{t("performance.columns.rank")}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>{t("performance.columns.employee")}</th>
+                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>{t("performance.columns.department")}</th>
+                <SortTh k="attendance_rate" label={t("performance.columns.attendance")} />
+                <th className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>{t("performance.columns.perfRating")}</th>
+                <SortTh k="combined_score" label={t("performance.columns.combinedScore")} />
               </tr>
             </thead>
             <tbody>
               {sorted.length > 0 ? sorted.map((emp, i) => {
                 const rank = i + 1;
-                const rankColor = rank <= 3 ? "#5b8df8" : "#4a5568";
+                const rankColor = rank <= 3 ? "#5b8df8" : p.faint;
                 const perf = PERF_STYLE[emp.performance_status?.toLowerCase()] || { bg: "rgba(107,122,153,0.1)", color: "#6b7a99" };
                 return (
                   <tr
                     key={emp.user_id}
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: i % 2 === 0 ? "#10131c" : "#12161f" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#151a26"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? "#10131c" : "#12161f"; }}
+                    style={{ borderBottom: `1px solid ${p.border}`, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
+                    onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; }}
                   >
                     <td className="px-4 py-3">
                       <span className="text-lg font-black" style={{ color: rankColor }}>#{rank}</span>
@@ -194,12 +198,12 @@ export default function Performance() {
                           {(emp.name || "?")[0].toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-semibold text-white">{emp.name}</p>
-                          <p className="text-xs font-mono" style={{ color: "#4a5568" }}>{emp.nik}</p>
+                          <p className="font-semibold" style={{ color: p.text }}>{emp.name}</p>
+                          <p className="text-xs font-mono" style={{ color: p.faint }}>{emp.nik}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3" style={{ color: "#c9d1e0" }}>{emp.departement?.toUpperCase()}</td>
+                    <td className="px-4 py-3" style={{ color: p.muted }}>{emp.departement?.toUpperCase()}</td>
                     <td className="px-4 py-3 font-semibold" style={{ color: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444" }}>
                       {emp.attendance_rate}%
                     </td>
@@ -208,13 +212,13 @@ export default function Performance() {
                         <span className="px-2 py-0.5 rounded text-xs font-semibold" style={{ background: perf.bg, color: perf.color }}>
                           {emp.performance_status.toUpperCase()}
                         </span>
-                      ) : <span style={{ color: "#4a5568" }}>—</span>}
+                      ) : <span style={{ color: p.faint }}>—</span>}
                     </td>
-                    <td className="px-4 py-3"><ScoreBar score={emp.combined_score} /></td>
+                    <td className="px-4 py-3"><ScoreBar score={emp.combined_score} barBg={barBg} /></td>
                   </tr>
                 );
               }) : (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: "#4a5568" }}>No data for {month}</td></tr>
+                <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: p.faint }}>{t("performance.noData")} {month}</td></tr>
               )}
             </tbody>
           </table>
@@ -222,12 +226,12 @@ export default function Performance() {
       )}
 
       {tab === "records" && (
-        <div className="rounded-xl overflow-hidden" style={{ background: "#10131c", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="rounded-xl overflow-hidden transition-colors duration-200" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                {["Quarter", "NIK", "Employee", "Status", "Description", "Action"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>{h}</th>
+              <tr style={{ borderBottom: `1px solid ${p.border}` }}>
+                {[t("performance.columns.quarter"), t("performance.columns.nik"), t("performance.columns.employee"), t("performance.columns.status"), t("performance.columns.description"), t("performance.columns.action")].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-widest uppercase" style={{ color: p.faint }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -237,33 +241,33 @@ export default function Performance() {
                 return (
                   <tr
                     key={item.id}
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: i % 2 === 0 ? "#10131c" : "#12161f" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#151a26"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? "#10131c" : "#12161f"; }}
+                    style={{ borderBottom: `1px solid ${p.border}`, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
+                    onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; }}
                   >
-                    <td className="px-4 py-3 font-semibold" style={{ color: "#c9d1e0" }}>Q{item.quarter}</td>
+                    <td className="px-4 py-3 font-semibold" style={{ color: p.text }}>Q{item.quarter}</td>
                     <td className="px-4 py-3 font-mono text-xs" style={{ color: "#5b8df8" }}>{item.users?.nik}</td>
-                    <td className="px-4 py-3 font-medium text-white">{item.users?.name}</td>
+                    <td className="px-4 py-3 font-medium" style={{ color: p.text }}>{item.users?.name}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 rounded text-xs font-semibold" style={{ background: perf.bg, color: perf.color }}>{item.status?.toUpperCase()}</span>
                     </td>
-                    <td className="px-4 py-3" style={{ color: "#6b7a99" }}>{item.description || "—"}</td>
-                    <td className="px-4 py-3"><DeleteButton onConfirm={() => handleDelete(item.id)} /></td>
+                    <td className="px-4 py-3" style={{ color: p.muted }}>{item.description || "—"}</td>
+                    <td className="px-4 py-3"><DeleteButton label={t("common.delete")} confirmLabel={t("common.confirm")} onConfirm={() => handleDelete(item.id)} /></td>
                   </tr>
                 );
               }) : (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: "#4a5568" }}>No performance records</td></tr>
+                <tr><td colSpan={6} className="px-4 py-12 text-center text-sm" style={{ color: p.faint }}>{t("performance.noRecords")}</td></tr>
               )}
             </tbody>
           </table>
         </div>
       )}
 
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="Add Performance Record">
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={t("performance.addTitle")}>
         <form onSubmit={handleSubmit} id="createPerformance" className="flex flex-col gap-4">
           <PerformanceForm onSubmit={handleSubmit} />
           <button type="submit" className="w-full py-2.5 rounded-lg text-sm font-bold text-white" style={{ background: "#3b6fd4" }} onMouseEnter={e => { e.currentTarget.style.background = "#2f5cb8"; }} onMouseLeave={e => { e.currentTarget.style.background = "#3b6fd4"; }}>
-            Save Record
+            {t("performance.saveRecord")}
           </button>
         </form>
       </Drawer>
