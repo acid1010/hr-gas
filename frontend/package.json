@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3040",
-    "build": "next build",
-    "start": "node .next/standalone/server.js",
+    "build": "next build && cp -r .next/static .next/standalone/frontend/.next/static && cp -r public .next/standalone/frontend/public 2>/dev/null || true",
+    "start": "PORT=3040 HOSTNAME=0.0.0.0 node .next/standalone/frontend/server.js",
     "lint": "eslint"
   },
   "dependencies": {
