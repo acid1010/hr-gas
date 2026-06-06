@@ -305,6 +305,37 @@ export default function Employee() {
               {t("common.showing")} {start}–{end} {t("common.of")} {total}
             </span>
           )}
+
+          {/* Department filter chips */}
+          <div className="flex items-center gap-1.5 flex-wrap ml-auto">
+            {Object.entries(DEPT_COLORS).map(([dept, color]) => {
+              const active = keyword.toLowerCase() === dept;
+              return (
+                <motion.button
+                  key={dept}
+                  type="button"
+                  onClick={() => {
+                    const next = active ? "" : dept;
+                    setLocalKeyword(next);
+                    const sp = new URLSearchParams(searchParams.toString());
+                    sp.set("keyword", next); sp.set("page", "1");
+                    router.push(`?${sp.toString()}`);
+                  }}
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.94 }}
+                  transition={{ duration: 0.12 }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide transition-all duration-150"
+                  style={active
+                    ? { background: `${color}22`, border: `1.5px solid ${color}`, color }
+                    : { background: p.inputBg, border: `1px solid ${p.border2}`, color: p.faint }
+                  }
+                >
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? color : p.faint }} />
+                  {dept}
+                </motion.button>
+              );
+            })}
+          </div>
         </motion.div>
 
         {/* TABLE */}

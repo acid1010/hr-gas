@@ -134,11 +134,12 @@ export default function Performance() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      toast(t("performance.saveRecord") + " — OK");
       e.target.reset();
       setDrawerOpen(false);
       loadLeaderboard();
       loadPerf();
-    } catch (err) { console.error(err); }
+    } catch (err) { toast(err.message, "error"); }
   };
 
   const handleDelete = async (id) => {
