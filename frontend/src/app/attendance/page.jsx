@@ -53,6 +53,7 @@ export default function Attendance() {
   const [deviceStatus,setDeviceStatus]= useState(null);
     const [loading,     setLoading]     = useState(false);
   const [lastSynced,  setLastSynced]  = useState(null);
+  const [nameFilter,  setNameFilter]  = useState("");
   const autoSyncRef = useRef(null);
 
   const punchLabel = (type) => {
@@ -104,6 +105,15 @@ export default function Attendance() {
     autoSyncRef.current = setInterval(() => doSync(true), 5 * 60 * 1000);
     return () => clearInterval(autoSyncRef.current);
   }, []);
+
+  const filteredRecords = nameFilter.trim()
+    ? records.filter(r => {
+        const q = nameFilter.toLowerCase();
+        return (r.users?.name || "").toLowerCase().includes(q) ||
+               String(r.users?.nik || r.device_uid || "").includes(q) ||
+               (r.users?.departement || "").toLowerCase().includes(q);
+      })
+    : records;
 
   const presentSet  = new Set(records.filter(r => r.user_id).map(r => r.user_id));
   const times       = records.map(r => new Date(r.punch_time).getTime());
@@ -283,9 +293,26 @@ export default function Attendance() {
               <FileSpreadsheet size={14} /> {t("attendance.monthlyReport")}
             </button>
           </div>
-          <span className="text-xs font-medium" style={{ color: p.faint }}>
-            {total} {t("attendance.records")} {t("attendance.on")} {date}
-          </span>
+          <div className="flex items-center gap-2 mt-2 w-full xl:mt-0 xl:w-auto xl:ml-auto">
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
+              <input
+                type="text"
+                placeholder={t("attendance.filterName") || "Filter by name / NIK…"}
+                value={nameFilter}
+                onChange={e => setNameFilter(e.target.value)}
+                className="pl-8 pr-4 py-2 rounded-xl text-sm outline-none transition-all w-52"
+                style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
+                onFocus={e => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.1)"; }}
+                onBlur={e =>  { e.target.style.borderColor = p.border2;  e.target.style.boxShadow = "none"; }}
+              />
+            </div>
+            <span className="text-xs font-medium" style={{ color: p.faint }}>
+              {filteredRecords.length !== records.length
+                ? `${filteredRecords.length} / ${total}`
+                : `${total}`} {t("attendance.records")}
+            </span>
+          </div>
         </motion.div>
 
         {/* TABLE */}
@@ -311,7 +338,7 @@ export default function Attendance() {
             >
               {loading ? (
                 <tr><td colSpan={5} className="px-5 py-14 text-center text-sm" style={{ color: p.faint }}>{t("common.loading")}</td></tr>
-              ) : records.length > 0 ? records.map((rec, i) => {
+              ) : filteredRecords.length > 0 ? filteredRecords.map((rec, i) => {
                 const punch         = punchLabel(rec.punch_type);
                 const isUnregistered = !rec.user_id;
                 return (
@@ -380,7 +407,9 @@ export default function Attendance() {
               }) : (
                 <tr>
                   <td colSpan={5} className="px-5 py-14 text-center text-sm" style={{ color: p.faint }}>
-                    {t("attendance.noRecords")} {date}. {t("attendance.trySync")}
+                    {nameFilter
+                      ? `No records matching "${nameFilter}"`
+                      : `${t("attendance.noRecords")} ${date}. ${t("attendance.trySync")}`}
                   </td>
                 </tr>
               )}
