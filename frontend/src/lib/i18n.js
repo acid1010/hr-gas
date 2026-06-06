@@ -290,7 +290,7 @@ export const translations = {
 
 export function t(lang, path) {
   const keys = path.split(".");
-  let val = translations[lang] || translations.id;
+  let val = translations[lang] || translations.en;
   for (const k of keys) {
     val = val?.[k];
     if (val === undefined) return path;

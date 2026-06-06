@@ -10,12 +10,12 @@ export function useLang() { return useContext(LangContext); }
 
 export default function AppProviders({ children }) {
   const [theme, setTheme] = useState("gas-dark");
-  const [lang, setLang] = useState("id");
+  const [lang, setLang] = useState("en");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("gas-theme") || "gas-dark";
-    const savedLang = localStorage.getItem("gas-lang") || "id";
+    const savedLang = localStorage.getItem("gas-lang") || "en";
     setTheme(savedTheme);
     setLang(savedLang);
     document.documentElement.setAttribute("data-theme", savedTheme);
