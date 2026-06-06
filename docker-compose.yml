@@ -54,7 +54,7 @@ services:
       NEXT_PUBLIC_API_BASE_URL_PRODUCTION: http://backend:3041
       JWT_SECRET: ${JWT_SECRET}
     ports:
-      - "3000:3000"
+      - "3040:3000"
 
 volumes:
   postgres_data:

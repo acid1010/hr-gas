@@ -68,7 +68,7 @@ Allowed origins are hardcoded in `src/index.js`. Add new origins there if the fr
 cd frontend
 cp .env.example .env.local   # fill in values
 npm install
-npm run dev      # http://localhost:3000
+npm run dev      # http://localhost:3040
 npm run build
 npm run lint
 ```
