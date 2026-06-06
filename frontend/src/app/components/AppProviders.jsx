@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import Toaster from "./Toaster";
+import Toaster from "./Toaster"
+import CommandPalette from "./CommandPalette";
 
 const ThemeContext = createContext(null);
 const LangContext = createContext(null);
@@ -39,6 +40,7 @@ export default function AppProviders({ children }) {
       <LangContext.Provider value={{ lang, toggleLang }}>
         {children}
         <Toaster />
+        <CommandPalette />
       </LangContext.Provider>
     </ThemeContext.Provider>
   );

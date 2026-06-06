@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Users, TrendingUp, Clock, Fingerprint, LogOut, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, Users, TrendingUp, Clock, Fingerprint, LogOut, Sun, Moon, Search } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useTheme, useLang } from "./AppProviders";
 import { t } from "@/lib/i18n";
@@ -71,6 +71,24 @@ export default function Sidebar({ user }) {
           </div>
         </div>
       </motion.div>
+
+      {/* Cmd+K search trigger */}
+      <div className="px-3 pt-2 pb-1 shrink-0">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("gas:cmd"))}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150"
+          style={{ background: chipBg, border: `1px solid ${chipBorder}`, color: mutedText }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.4)"; e.currentTarget.style.color = textColor; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = chipBorder; e.currentTarget.style.color = mutedText; }}
+        >
+          <Search size={13} style={{ flexShrink: 0 }} />
+          <span className="flex-1 text-left">Search…</span>
+          <div className="flex items-center gap-0.5">
+            <kbd className="text-[9px] font-black px-1 py-0.5 rounded" style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", color: mutedText }}>⌘</kbd>
+            <kbd className="text-[9px] font-black px-1 py-0.5 rounded" style={{ background: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)", color: mutedText }}>K</kbd>
+          </div>
+        </button>
+      </div>
 
       {/* Nav */}
       <nav className="flex-1 p-3 overflow-y-auto">
