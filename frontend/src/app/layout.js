@@ -39,6 +39,14 @@ export default async function RootLayout({ children }) {
       data-theme="gas-dark"
       suppressHydrationWarning
     >
+      {/* Sync theme before first paint — prevents flash for light-mode users */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('gas-theme');if(t)document.documentElement.setAttribute('data-theme',t);})();`,
+          }}
+        />
+      </head>
       <body className="min-h-screen" suppressHydrationWarning>
         <AppProviders>
           {user ? (

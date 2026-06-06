@@ -11,7 +11,6 @@ export function useLang() { return useContext(LangContext); }
 export default function AppProviders({ children }) {
   const [theme, setTheme] = useState("gas-dark");
   const [lang, setLang] = useState("en");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("gas-theme") || "gas-dark";
@@ -19,7 +18,6 @@ export default function AppProviders({ children }) {
     setTheme(savedTheme);
     setLang(savedLang);
     document.documentElement.setAttribute("data-theme", savedTheme);
-    setMounted(true);
   }, []);
 
   const toggleTheme = () => {
@@ -34,8 +32,6 @@ export default function AppProviders({ children }) {
     setLang(next);
     localStorage.setItem("gas-lang", next);
   };
-
-  if (!mounted) return null;
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === "gas-dark" }}>
