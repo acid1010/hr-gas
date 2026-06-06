@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import Toaster from "./Toaster";
 
 const ThemeContext = createContext(null);
 const LangContext = createContext(null);
@@ -37,6 +38,7 @@ export default function AppProviders({ children }) {
     <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === "gas-dark" }}>
       <LangContext.Provider value={{ lang, toggleLang }}>
         {children}
+        <Toaster />
       </LangContext.Provider>
     </ThemeContext.Provider>
   );

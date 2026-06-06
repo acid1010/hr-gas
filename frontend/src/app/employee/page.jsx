@@ -9,6 +9,7 @@ import EmployeeForm from "../components/forms/EmployeeForm";
 import Drawer from "../components/Drawer";
 import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Pencil, Trash2, Users } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
+import { toast } from "@/lib/toast";
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -98,7 +99,6 @@ export default function Employee() {
   const keyword = searchParams.get("keyword") || "";
 
   const [resultData,    setResultData]    = useState({ data: [], total: 0, totalPages: 1, currentPage: 1 });
-  const [notice,        setNotice]        = useState(null);
   const [drawerOpen,    setDrawerOpen]    = useState(false);
   const [formData,      setFormData]      = useState({});
   const [isEdit,        setIsEdit]        = useState(false);
@@ -122,8 +122,6 @@ export default function Employee() {
     router.push(`?${sp.toString()}`);
   };
 
-  const showNotice = (type, msg) => { setNotice({ type, msg }); setTimeout(() => setNotice(null), 6000); };
-
   const load = useCallback(async () => {
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/members?keyword=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`);
@@ -142,7 +140,7 @@ export default function Employee() {
       const a = document.createElement("a");
       a.href = url; a.download = `employees_${new Date().toISOString().slice(0,10)}.csv`; a.click();
       URL.revokeObjectURL(url);
-    } catch (err) { showNotice("error", err.message); }
+    } catch (err) { toast(err.message, "error"); }
   };
 
   const handleImport = (e) => {
@@ -157,9 +155,9 @@ export default function Employee() {
       });
       try {
         const res = await fetchWithAuth(`${apiBaseUrl}/members/import`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rows) });
-        showNotice("success", `${t("employee.importComplete")} — ${res.created} ${t("employee.created")}, ${res.skipped} ${t("employee.skipped")}`);
+        toast(`${t("employee.importComplete")} — ${res.created} ${t("employee.created")}, ${res.skipped} ${t("employee.skipped")}`);
         load();
-      } catch (err) { showNotice("error", err.message); }
+      } catch (err) { toast(err.message, "error"); }
     };
     reader.readAsText(file);
   };
@@ -175,22 +173,22 @@ export default function Employee() {
     e.preventDefault();
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/members`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(e.target).entries())) });
-      showNotice("success", res.message || t("employee.createEmployee")); setDrawerOpen(false); load();
-    } catch (err) { showNotice("error", err.message); }
+      toast(res.message || t("employee.createEmployee")); setDrawerOpen(false); load();
+    } catch (err) { toast(err.message, "error"); }
   };
 
   const handleUpdate = async () => {
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/members/${formData.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
-      showNotice("success", res.message || t("employee.saveChanges")); setDrawerOpen(false); load();
-    } catch (err) { showNotice("error", err.message); }
+      toast(res.message || t("employee.saveChanges")); setDrawerOpen(false); load();
+    } catch (err) { toast(err.message, "error"); }
   };
 
   const handleDelete = async (id) => {
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/members/delete/${id}`, { method: "PATCH" });
-      showNotice("success", res.message || t("common.delete")); load();
-    } catch (err) { showNotice("error", err.message); }
+      toast(res.message || t("common.delete")); load();
+    } catch (err) { toast(err.message, "error"); }
   };
 
   const { data = [], total = 0, totalPages = 1, currentPage = 1 } = resultData;
@@ -272,26 +270,6 @@ export default function Employee() {
           </div>
         </motion.div>
 
-        {/* NOTICE */}
-        <AnimatePresence>
-          {notice && (
-            <motion.div
-              key="notice"
-              initial={{ opacity: 0, y: -10, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: "auto" }}
-              exit={{ opacity: 0, y: -8, height: 0 }}
-              transition={{ duration: 0.28 }}
-              className="mb-5 px-4 py-3 rounded-xl text-sm font-medium overflow-hidden"
-              style={{
-                background: notice.type === "success" ? "rgba(34,197,94,0.08)"  : "rgba(239,68,68,0.08)",
-                border: `1px solid ${notice.type === "success" ? "rgba(34,197,94,0.22)" : "rgba(239,68,68,0.22)"}`,
-                color:  notice.type === "success" ? "#22c55e" : "#ef4444",
-              }}
-            >
-              {notice.msg}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* TOOLBAR */}
         <motion.div
