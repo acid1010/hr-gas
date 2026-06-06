@@ -1,46 +1,74 @@
 "use client";
 import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { useAppSettings } from "@/lib/useAppSettings";
 
 export default function Drawer({ open, onClose, title, children }) {
+  const { p } = useAppSettings();
+
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     if (open) document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0"
-        style={{ background: "rgba(0,0,0,0.55)" }}
-        onClick={onClose}
-      />
-      {/* Panel */}
-      <div
-        className="relative flex flex-col w-[480px] h-full overflow-y-auto z-10"
-        style={{ background: "#10131c", borderLeft: "1px solid rgba(255,255,255,0.08)" }}
-      >
-        <div
-          className="flex items-center justify-between px-6 py-4 shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-        >
-          <h2 className="text-base font-black text-white tracking-tight">{title}</h2>
-          <button
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            style={{ background: "rgba(0,0,0,0.52)", backdropFilter: "blur(3px)" }}
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: "#6b7a99" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.color = "#c9d1e0"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = "#6b7a99"; }}
+          />
+
+          {/* Panel — spring slide from right */}
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 340, damping: 34 }}
+            className="relative flex flex-col w-[480px] h-full overflow-y-auto z-10"
+            style={{ background: p.cardBg, borderLeft: `1px solid ${p.border}` }}
           >
-            <X size={16} />
-          </button>
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-6 py-4 shrink-0"
+              style={{ borderBottom: `1px solid ${p.border}` }}
+            >
+              <h2 className="text-base font-black tracking-tight" style={{ color: p.text }}>{title}</h2>
+              <motion.button
+                onClick={onClose}
+                className="p-1.5 rounded-lg transition-colors duration-150"
+                style={{ color: p.faint }}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.93 }}
+                transition={{ duration: 0.15 }}
+                onMouseEnter={e => { e.currentTarget.style.background = p.inputBg; e.currentTarget.style.color = p.text; }}
+                onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.color = p.faint; }}
+              >
+                <X size={16} />
+              </motion.button>
+            </div>
+
+            {/* Content — staggered entrance */}
+            <motion.div
+              className="flex-1 px-6 py-5"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {children}
+            </motion.div>
+          </motion.div>
         </div>
-        <div className="flex-1 px-6 py-5">{children}</div>
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }

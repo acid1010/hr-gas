@@ -1,23 +1,23 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import { LayoutDashboard, Users, TrendingUp, Clock, Fingerprint, LogOut, Sun, Moon } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
-import { useTheme } from "./AppProviders";
-import { useLang } from "./AppProviders";
+import { useTheme, useLang } from "./AppProviders";
 import { t } from "@/lib/i18n";
 
 export default function Sidebar({ user }) {
-  const pathname = usePathname();
+  const pathname   = usePathname();
   const { isDark, toggleTheme } = useTheme();
-  const { lang, toggleLang } = useLang();
+  const { lang, toggleLang }    = useLang();
 
   const navItems = [
-    { href: "/dashboard", label: t(lang, "nav.dashboard"), icon: LayoutDashboard },
-    { href: "/employee", label: t(lang, "nav.employee"), icon: Users, exact: true },
-    { href: "/attendance", label: t(lang, "nav.attendance"), icon: Fingerprint },
+    { href: "/dashboard",          label: t(lang, "nav.dashboard"),   icon: LayoutDashboard },
+    { href: "/employee",           label: t(lang, "nav.employee"),    icon: Users, exact: true },
+    { href: "/attendance",         label: t(lang, "nav.attendance"),  icon: Fingerprint },
     { href: "/employee/performance", label: t(lang, "nav.performance"), icon: TrendingUp },
-    { href: "/overtime", label: t(lang, "nav.overtime"), icon: Clock },
+    { href: "/overtime",           label: t(lang, "nav.overtime"),    icon: Clock },
   ];
 
   const isActive = (href, exact) => {
@@ -30,16 +30,16 @@ export default function Sidebar({ user }) {
     window.location.href = "/login";
   };
 
-  // Light/dark palette tokens
-  const bg = isDark ? "#10131c" : "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)";
-  const mutedText = isDark ? "#6b7a99" : "#64748b";
+  const bg         = isDark ? "#10131c"                     : "#ffffff";
+  const border     = isDark ? "rgba(255,255,255,0.06)"      : "rgba(0,0,0,0.07)";
+  const mutedText  = isDark ? "#6b7a99"                     : "#64748b";
   const activeText = "#5b8df8";
-  const activeBg = isDark ? "#1e2d52" : "#dce6fb";
-  const hoverBg = isDark ? "#161c2b" : "#f1f5ff";
-  const textColor = isDark ? "#c9d1e0" : "#1a2035";
-  const chipBg = isDark ? "#161c2b" : "#f0f2f7";
-  const chipBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const activeBg   = isDark ? "rgba(91,141,248,0.12)"       : "#dce6fb";
+  const hoverBg    = isDark ? "#161c2b"                     : "#f1f5ff";
+  const textColor  = isDark ? "#c9d1e0"                     : "#1a2035";
+  const chipBg     = isDark ? "#161c2b"                     : "#f0f2f7";
+  const chipBorder = isDark ? "rgba(255,255,255,0.08)"      : "rgba(0,0,0,0.08)";
+  const userBg     = isDark ? "rgba(255,255,255,0.025)"     : "rgba(0,0,0,0.025)";
 
   return (
     <aside
@@ -47,9 +47,18 @@ export default function Sidebar({ user }) {
       style={{ background: bg, borderRight: `1px solid ${border}` }}
     >
       {/* Brand */}
-      <div className="p-5" style={{ borderBottom: `1px solid ${border}` }}>
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="p-5 shrink-0"
+        style={{ borderBottom: `1px solid ${border}` }}
+      >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black text-white shrink-0" style={{ background: "#3b6fd4" }}>
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white shrink-0"
+            style={{ background: "#3b6fd4", boxShadow: "0 0 18px rgba(59,111,212,0.38)" }}
+          >
             GAS
           </div>
           <div>
@@ -61,83 +70,110 @@ export default function Sidebar({ user }) {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon, exact }) => {
-          const active = isActive(href, exact);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
-              style={active
-                ? { background: activeBg, color: activeText, borderLeft: "2px solid #5b8df8" }
-                : { color: mutedText }
-              }
-              onMouseEnter={e => { if (!active) { e.currentTarget.style.background = hoverBg; e.currentTarget.style.color = textColor; } }}
-              onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ""; e.currentTarget.style.color = mutedText; } }}
-            >
-              <Icon size={16} />
-              {label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 p-3 overflow-y-auto">
+        <div className="flex flex-col gap-0.5">
+          {navItems.map(({ href, label, icon: Icon, exact }, i) => {
+            const active = isActive(href, exact);
+            return (
+              <motion.div
+                key={href}
+                initial={{ opacity: 0, x: -14 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.055 + 0.1, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Link
+                  href={href}
+                  className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors duration-150"
+                  style={{ color: active ? activeText : mutedText, fontWeight: active ? 700 : 500 }}
+                  onMouseEnter={e => { if (!active) { e.currentTarget.style.background = hoverBg; e.currentTarget.style.color = textColor; } }}
+                  onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ""; e.currentTarget.style.color = mutedText; } }}
+                >
+                  {/* Animated pill background — slides between nav items */}
+                  {active && (
+                    <motion.div
+                      layoutId="nav-active-pill"
+                      className="absolute inset-0 rounded-xl"
+                      style={{ background: activeBg }}
+                      transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                    />
+                  )}
+
+                  <Icon size={16} className="relative z-10 shrink-0" />
+                  <span className="relative z-10 flex-1">{label}</span>
+
+                  {/* Blue dot indicator — also layout-animated */}
+                  {active && (
+                    <motion.div
+                      layoutId="nav-active-dot"
+                      className="relative z-10 w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: "#5b8df8" }}
+                      transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                    />
+                  )}
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Controls: theme + lang */}
-      <div className="px-3 pb-2 flex items-center gap-2">
-        {/* Theme toggle */}
+      <div className="px-3 pb-2 flex items-center gap-2 shrink-0">
         <button
           onClick={toggleTheme}
           title={isDark ? "Switch to Light" : "Switch to Dark"}
-          className="flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+          className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150"
           style={{ background: chipBg, border: `1px solid ${chipBorder}`, color: mutedText }}
-          onMouseEnter={e => { e.currentTarget.style.color = textColor; }}
-          onMouseLeave={e => { e.currentTarget.style.color = mutedText; }}
+          onMouseEnter={e => { e.currentTarget.style.color = textColor; e.currentTarget.style.borderColor = "rgba(91,141,248,0.4)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = mutedText; e.currentTarget.style.borderColor = chipBorder; }}
         >
           {isDark ? <Sun size={15} /> : <Moon size={15} />}
         </button>
-
-        {/* Language toggle */}
         <button
           onClick={toggleLang}
-          title="Toggle language"
-          className="flex-1 flex items-center justify-center h-9 rounded-lg text-xs font-black tracking-widest transition-colors"
+          className="flex-1 flex items-center justify-center h-9 rounded-xl text-xs font-black tracking-widest transition-all duration-150"
           style={{ background: chipBg, border: `1px solid ${chipBorder}`, color: mutedText }}
-          onMouseEnter={e => { e.currentTarget.style.color = textColor; }}
-          onMouseLeave={e => { e.currentTarget.style.color = mutedText; }}
+          onMouseEnter={e => { e.currentTarget.style.color = textColor; e.currentTarget.style.borderColor = "rgba(91,141,248,0.4)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = mutedText; e.currentTarget.style.borderColor = chipBorder; }}
         >
           {lang === "id" ? "EN" : "ID"}
         </button>
       </div>
 
       {/* User + Logout */}
-      <div className="p-3" style={{ borderTop: `1px solid ${border}` }}>
+      <div className="p-3 shrink-0" style={{ borderTop: `1px solid ${border}` }}>
         {user && (
-          <div className="flex items-center gap-3 px-3 py-2 mb-1">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ background: activeBg, color: activeText }}>
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1.5" style={{ background: userBg }}>
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shrink-0 text-white"
+              style={{ background: "#3b6fd4" }}
+            >
               {(user.name || user.username || "U")[0].toUpperCase()}
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold truncate" style={{ color: textColor }}>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold truncate leading-snug" style={{ color: textColor }}>
                 {user.name || user.username}
               </p>
-              <p className="text-xs truncate capitalize" style={{ color: mutedText }}>
-                {user.role || "User"}
-              </p>
+              <span
+                className="text-[10px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-md inline-block mt-0.5"
+                style={{ background: "rgba(91,141,248,0.12)", color: "#5b8df8" }}
+              >
+                {user.role || "user"}
+              </span>
             </div>
           </div>
         )}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150"
           style={{ color: "#ef4444" }}
           onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
           onMouseLeave={e => { e.currentTarget.style.background = ""; }}
         >
-          <LogOut size={16} />
+          <LogOut size={15} />
           {t(lang, "nav.logout")}
         </button>
       </div>
