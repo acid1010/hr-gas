@@ -129,7 +129,7 @@ export default function Attendance() {
       const a    = document.createElement("a");
       a.href = url; a.download = `laporan_hr_${reportMonth}.xlsx`; a.click();
       URL.revokeObjectURL(url);
-    } catch (err) { console.error(err); }
+    } catch (err) { toast(err.message, "error"); }
   };
 
   const statItems = [
