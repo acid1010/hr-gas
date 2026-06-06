@@ -1,101 +1,82 @@
 # HR System — PT. Global Anugerah Setia
 
-Internal HR management portal for PT. Global Anugerah Setia. Built with Next.js (frontend) and Express.js + Prisma (backend).
+Internal HR management portal for PT. Global Anugerah Setia.
+
+- **Frontend** — Next.js 16, Tailwind CSS, DaisyUI — runs on port **3040**
+- **Backend** — Express 5, Prisma, PostgreSQL, Redis — runs on port **3041**
 
 ---
 
-## Project Structure
+## Quick Start
 
+There are two ways to run this system: **Manual** (recommended for development) or **Docker** (recommended for production).
+
+---
+
+## Option A — Manual Setup
+
+### Step 1 — Prerequisites
+
+Install these before continuing:
+
+- [Node.js v20+](https://nodejs.org)
+- PostgreSQL (database named `hr` must exist)
+- Redis
+
+Start Redis with Docker if you don't have it installed locally:
+
+```bash
+docker run -d --name hr-redis -p 6379:6379 \
+  redis:7-alpine redis-server --requirepass "yourpassword"
 ```
-hr-gas/
-├── backend/    Express API, Prisma, PostgreSQL, Redis
-└── frontend/   Next.js app
+
+---
+
+### Step 2 — Backend
+
+#### 2a. Create the environment file
+
+```bash
+cd backend
+cp .env.example .env
 ```
 
----
-
-## Prerequisites
-
-- Node.js v18+
-- PostgreSQL (database must exist)
-- Redis (local or Docker)
-- PM2 (optional, for production)
-- ZKTeco fingerprint device on the same local network (for attendance)
-
----
-
-## 1 — Backend Setup
-
-### Environment
-
-Create `backend/.env`:
+Open `backend/.env` and fill in your values:
 
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/hr?sslmode=disable"
+DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/hr?sslmode=disable"
 PORT=3041
-JWT_SECRET="your-access-token-secret"
-JWT_REFRESH="your-refresh-token-secret"
+JWT_SECRET="any-long-random-string"
+JWT_REFRESH="another-long-random-string"
 REDIS_URL="redis://:yourpassword@127.0.0.1:6379"
-
-# ZKTeco fingerprint device
 ZK_IP=192.128.69.33
 ZK_PORT=4370
 ```
 
-### Start Redis (Docker)
+> `JWT_SECRET` and `JWT_REFRESH` can be any random string. Keep them secret and consistent.
+
+#### 2b. Install dependencies and generate Prisma client
 
 ```bash
-docker run -d --name hr-redis -p 6379:6379 redis:7-alpine redis-server --requirepass "yourpassword"
-```
-
-### Install & Run
-
-```bash
-cd backend
 npm install
 npx prisma generate
-node src/index.js
-# or with PM2:
-PORT=3041 pm2 start src/index.js --name backend-hr
 ```
 
-### Run the Attendance Migration
+#### 2c. Run the database migration
 
-The `attendance` table must be created before syncing the fingerprint device:
-
-```sql
--- Run this once on your PostgreSQL database
--- File: backend/prisma/migrations/20260605_add_attendance/migration.sql
-
-CREATE TABLE IF NOT EXISTS "attendance" (
-    "id"         UUID NOT NULL DEFAULT gen_random_uuid(),
-    "user_id"    UUID,
-    "device_uid" VARCHAR(50),
-    "punch_time" TIMESTAMP(6) NOT NULL,
-    "punch_type" INTEGER,
-    "created_at" TIMESTAMP(6) NOT NULL DEFAULT now(),
-    CONSTRAINT "attendance_pkey" PRIMARY KEY ("id"),
-    CONSTRAINT "attendance_device_uid_punch_time_key" UNIQUE ("device_uid", "punch_time")
-);
-
-ALTER TABLE "attendance"
-    ADD CONSTRAINT "attendance_user_id_fkey"
-    FOREIGN KEY ("user_id") REFERENCES "users"("id")
-    ON DELETE NO ACTION ON UPDATE NO ACTION;
-```
-
-Or run via psql:
+Run this once to create the `attendance` table:
 
 ```bash
-psql $DATABASE_URL -f backend/prisma/migrations/20260605_add_attendance/migration.sql
+psql "$DATABASE_URL" -f prisma/migrations/20260605_add_attendance/migration.sql
 ```
 
-### Seed an Admin User
+If `psql` is not in your PATH, open the file and run the SQL manually in your PostgreSQL client.
 
-No default users are created. Run this once to create an admin account:
+#### 2d. Create the first admin user
+
+No default users exist. Run this once:
 
 ```bash
-cd backend
 node -e "
 const prisma = require('./libs/prisma');
 const bcrypt = require('bcrypt');
@@ -106,216 +87,236 @@ bcrypt.hash('yourpassword', 10).then(hash =>
     hash,
     role: 'admin',
     access: 'superadmin',
+    status: 'aktif',
   }}).then(u => { console.log('Created:', u.username); process.exit(); })
 );
 "
 ```
 
----
+#### 2e. Start the backend
 
-## 2 — Frontend Setup
-
-### Environment
-
-Create `frontend/.env.local`:
-
-```env
-NEXT_PUBLIC_API_BASE_URL_PRODUCTION=http://localhost:3041
-JWT_SECRET="your-access-token-secret"
+```bash
+PORT=3041 node src/index.js
 ```
 
-> `JWT_SECRET` must match the backend value — the frontend uses it to decode the token server-side in `layout.js`.
+Or with PM2 for persistent background running:
 
-### Install & Run
+```bash
+npm install -g pm2
+pm2 start src/index.js --name backend-hr -- --port 3041
+pm2 save
+```
+
+The backend is ready when you see:
+```
+Redis connected successfully
+Server is running on port 3041
+```
+
+---
+
+### Step 3 — Frontend
+
+#### 3a. Create the environment file
 
 ```bash
 cd frontend
+cp .env.example .env.local
+```
+
+Open `frontend/.env.local` and set:
+
+```env
+NEXT_PUBLIC_API_BASE_URL_PRODUCTION=http://localhost:3041
+JWT_SECRET="any-long-random-string"
+```
+
+> `JWT_SECRET` must be the **same value** as in `backend/.env`.
+
+#### 3b. Install dependencies
+
+```bash
 npm install
-npm run dev        # development — http://localhost:3000
-npm run build && npm start   # production
+```
+
+#### 3c. Start the frontend
+
+Development mode (with hot reload):
+
+```bash
+npm run dev
+```
+
+Production mode:
+
+```bash
+npm run build
+npm start
+```
+
+The frontend is ready when you see:
+```
+Ready on http://localhost:3040
 ```
 
 ---
 
-## 3 — Login
+### Step 4 — Open the app
 
-Open `http://localhost:3000/login` and sign in with the credentials you seeded above.
+Go to **http://localhost:3040/login** and sign in with the admin credentials you created in Step 2d.
 
 ---
 
-## 4 — Docker Deployment (optional)
+## Option B — Docker (All-in-One)
 
-Copy the env template and fill in secrets:
+Runs PostgreSQL, Redis, backend, and frontend in containers.
+
+### Step 1 — Create environment files
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-Then start all services with Docker Compose:
+Edit `backend/.env` — at minimum set:
+- `JWT_SECRET`
+- `JWT_REFRESH`
+- `POSTGRES_PASSWORD` (also set this in docker-compose.yml or via `.env` in the root)
+
+Edit `frontend/.env.local` — set `JWT_SECRET` to match the backend.
+
+### Step 2 — Build and start
 
 ```bash
 docker compose up -d --build
 ```
 
-Services:
-- `postgres` — PostgreSQL 16 on port 5432
-- `redis` — Redis 7 on port 6379
-- `backend` — Express API on port 3041
-- `frontend` — Next.js on port 3000
+Services started:
+| Container | Port |
+|-----------|------|
+| hr-postgres | 5432 |
+| hr-redis | 6379 |
+| hr-backend | 3041 |
+| hr-frontend | 3040 |
 
-Run the attendance migration after first boot:
+### Step 3 — Run the migration
+
+Run once after the first boot:
 
 ```bash
 docker exec -i hr-postgres psql -U postgres -d hr \
   < backend/prisma/migrations/20260605_add_attendance/migration.sql
 ```
 
----
+### Step 4 — Create admin user
 
-## 5 — TV Display Route
-
-Open `http://your-server:3000/display` on any browser (no login required).
-
-The display shows:
-- Live clock and date in the header
-- **Top Performers** — highest combined score (attendance × 0.6 + performance × 0.4)
-- **Needs Improvement** — lowest combined scores
-- Auto-refreshes every 5 minutes
-- Animated score bars and entrance animations via framer-motion
-
-The combined score formula:
-```
-combined_score = (attendance_rate × 0.6 + performance_rating × 0.4) × 100
-
-attendance_rate  = days_present_this_month / working_days_this_month
-performance_rating: best=1.0, good=0.75, average=0.50, worst=0.25
+```bash
+docker exec hr-backend node -e "
+const prisma = require('./libs/prisma');
+const bcrypt = require('bcrypt');
+bcrypt.hash('yourpassword', 10).then(hash =>
+  prisma.users.create({ data: {
+    name: 'Administrator',
+    username: 'admin',
+    hash,
+    role: 'admin',
+    access: 'superadmin',
+    status: 'aktif',
+  }}).then(u => { console.log('Created:', u.username); process.exit(); })
+);
+"
 ```
 
----
+### Step 5 — Open the app
 
-## API Routes
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/login` | Sign in, sets JWT cookies |
-| POST | `/auth/logout` | Clear cookies |
-| POST | `/auth/refresh_token` | Refresh access token |
-| GET | `/members` | List employees (paginated, searchable) |
-| POST | `/members` | Create employee |
-| PUT | `/members/:id` | Update employee |
-| PATCH | `/members/delete/:id` | Soft-delete employee |
-| GET | `/members/export` | Download all employees as CSV |
-| POST | `/members/import` | Bulk-create employees from JSON array |
-| GET | `/api/performance` | List performance records |
-| POST | `/api/performance/post` | Create performance record |
-| DELETE | `/api/performance/delete/:id` | Delete performance record |
-| GET | `/api/attendance` | List attendance logs (date/user filter) |
-| POST | `/api/attendance/sync` | Pull logs from ZKTeco device into DB |
-| GET | `/api/attendance/summary` | Per-user days-present count by month |
-| GET | `/api/attendance/device/info` | Check device connectivity |
-| GET | `/api/attendance/report/excel` | Download monthly HR report as `.xlsx` |
-| GET | `/api/performance/leaderboard` | Combined attendance + performance ranking |
+Go to **http://localhost:3040/login**.
 
 ---
 
-## Import / Export Employees
+## TV Display
 
-### Export
+Open **http://your-server:3040/display** in a browser — no login required.
 
-Click **Export** on the Employee page — downloads `employees_YYYY-MM-DD.csv` with columns:
-
-```
-nik, name, join_date, status, section, departement, worker_stats, email, username, role, access
-```
-
-### Import
-
-1. Prepare a CSV with the same columns as the export (header row required)
-2. Click **Import** on the Employee page and select the file
-3. Duplicate NIKs are skipped; results are shown in an alert
+Shows the monthly employee performance leaderboard (top 5 and bottom 5), auto-refreshing every 5 minutes. Best for a large screen in the production floor or office.
 
 ---
 
-## Fingerprint Attendance (ZKTeco X100-C)
+## Fingerprint Device (ZKTeco X100-C)
 
-### Device Setup
+The fingerprint machine must be on the **same local network** as the backend server.
 
-The device must be on the same local network as the backend server.
-
-Default device settings (from device screen):
 | Setting | Value |
 |---------|-------|
-| IP Address | `192.128.69.33` |
-| TCP COMM Port | `4370` |
-| DHCP | OFF (static) |
+| Device IP | `192.128.69.33` |
+| TCP Port | `4370` |
 
-To use a different device IP or port, update `ZK_IP` and `ZK_PORT` in `backend/.env`.
+Before syncing, each employee must be enrolled on the device with their **NIK as their User ID** — this is how punch records are matched to database records.
 
-### Register Employees on the Device
+To sync: open the **Attendance** page → click **Sync Device**.
 
-Each employee must be enrolled on the fingerprint device with their **NIK as their User ID**. This is how the sync matches device punch records to employees in the database.
-
-### Syncing Attendance
-
-1. Open the **Attendance** page in the HR portal
-2. The device status indicator shows **Online** if the backend can reach `192.128.69.33:4370`
-3. Click **Sync Device** — pulls all stored punch records from the machine
-4. Records are matched to employees by NIK; unmatched punches show as "Unregistered"
-5. Duplicate punches (same device UID + timestamp) are automatically skipped
-
-### Punch Types
-
-| Type | Meaning |
-|------|---------|
-| `0` | Check In |
-| `1` | Check Out |
-
-### Attendance Summary (for Performance)
-
-`GET /api/attendance/summary?month=YYYY-MM` returns days-present per employee for the given month, which can be used to inform quarterly performance scoring.
+To change the device IP/port, update `ZK_IP` and `ZK_PORT` in `backend/.env`.
 
 ---
 
-## Employee Field Reference
+## Troubleshooting
 
-| Field | Values |
-|-------|--------|
+**`Server is running on port undefined`**
+→ You forgot to set `PORT`. Run: `PORT=3041 node src/index.js`
+
+**`Redis connection refused`**
+→ Redis is not running. Start it: `docker start hr-redis`
+
+**Login fails with correct credentials**
+→ Check that `JWT_SECRET` is identical in both `backend/.env` and `frontend/.env.local`
+→ Check that `NEXT_PUBLIC_API_BASE_URL_PRODUCTION` points to the running backend
+
+**Device shows Offline**
+→ Backend and device must be on the same subnet
+→ Test: `ping 192.128.69.33` and `nc -zv 192.128.69.33 4370`
+
+**Attendance shows "Unregistered"**
+→ The employee's User ID on the device does not match their NIK in the database
+→ Re-enroll the employee on the device using their exact NIK as the User ID
+
+**PM2 logs**
+```bash
+pm2 logs backend-hr
+pm2 restart backend-hr --update-env
+```
+
+---
+
+## Field Reference
+
+| Field | Valid values |
+|-------|-------------|
 | `status` | `aktif` / `non-aktif` |
-| `worker_stats` | `magang` / `borongan` / `pkwt` |
+| `worker_stats` | `pkwt` / `borongan` / `magang` |
 | `section` | `manager` / `spv` / `admin` / `operator` |
 | `departement` | `production` / `engineering` / `qc` / `maintenance` / `warehouse` / `hr` / `ga` / `it` |
 | `access` | `-` / `user` / `admin` / `superadmin` |
 
 ---
 
-## Troubleshooting
+## API Reference
 
-**Redis connection refused**
-```bash
-docker start hr-redis
-pm2 restart backend-hr
-```
-
-**`Server is running on port undefined`**
-```bash
-PORT=3041 pm2 restart backend-hr --update-env
-```
-
-**Login fails with correct credentials**
-- Confirm the backend is running and `NEXT_PUBLIC_API_BASE_URL_PRODUCTION` points to it
-- Check that `JWT_SECRET` matches on both sides
-
-**Device shows Offline on the Attendance page**
-- Confirm backend server and device are on the same network subnet
-- Ping the device: `ping 192.128.69.33`
-- Check the TCP port is reachable: `nc -zv 192.128.69.33 4370`
-- Verify `ZK_IP` and `ZK_PORT` in `backend/.env` match the device screen
-
-**Attendance records show "Unregistered"**
-- The employee's User ID on the ZKTeco device does not match their NIK in the database
-- Re-enroll the employee on the device using their exact NIK as the User ID
-
-**Sync button does nothing / times out**
-- Device may be busy or sleeping — wake it and retry
-- Check PM2 logs: `pm2 logs backend-hr`
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/auth/login` | Sign in |
+| POST | `/auth/logout` | Sign out |
+| POST | `/auth/refresh_token` | Refresh access token |
+| GET | `/members` | List employees |
+| POST | `/members` | Create employee |
+| PUT | `/members/:id` | Update employee |
+| PATCH | `/members/delete/:id` | Soft-delete employee |
+| GET | `/members/export` | Download employees as CSV |
+| POST | `/members/import` | Bulk import from CSV |
+| GET | `/api/performance` | List performance records |
+| POST | `/api/performance/post` | Add performance record |
+| DELETE | `/api/performance/delete/:id` | Delete performance record |
+| GET | `/api/performance/leaderboard?month=YYYY-MM` | Combined score ranking |
+| GET | `/api/attendance?date=YYYY-MM-DD` | List attendance logs |
+| POST | `/api/attendance/sync` | Pull records from ZKTeco device |
+| GET | `/api/attendance/summary?month=YYYY-MM` | Days-present per employee |
+| GET | `/api/attendance/device/info` | Check device connectivity |
+| GET | `/api/attendance/report/excel?month=YYYY-MM` | Download monthly report as .xlsx |
