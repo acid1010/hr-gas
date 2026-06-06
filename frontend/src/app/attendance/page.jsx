@@ -8,6 +8,7 @@ import apiBaseUrl from "@/lib/urlEndPoint";
 import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet, Activity, Users, Clock } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { toast } from "@/lib/toast";
+import { SkeletonTable } from "@/app/components/SkeletonRow";
 
 const fmt = (ts, opts) => new Date(ts).toLocaleString("id-ID", opts);
 
@@ -337,7 +338,7 @@ export default function Attendance() {
               variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.028 } } }}
             >
               {loading ? (
-                <tr><td colSpan={5} className="px-5 py-14 text-center text-sm" style={{ color: p.faint }}>{t("common.loading")}</td></tr>
+                <SkeletonTable rows={10} cols={5} />
               ) : filteredRecords.length > 0 ? filteredRecords.map((rec, i) => {
                 const punch         = punchLabel(rec.punch_type);
                 const isUnregistered = !rec.user_id;

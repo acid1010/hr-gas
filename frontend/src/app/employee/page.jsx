@@ -10,6 +10,7 @@ import Drawer from "../components/Drawer";
 import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Pencil, Trash2, Users } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { toast } from "@/lib/toast";
+import { SkeletonTable } from "../components/SkeletonRow";
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -99,6 +100,7 @@ export default function Employee() {
   const keyword = searchParams.get("keyword") || "";
 
   const [resultData,    setResultData]    = useState({ data: [], total: 0, totalPages: 1, currentPage: 1 });
+  const [loading,       setLoading]       = useState(true);
   const [drawerOpen,    setDrawerOpen]    = useState(false);
   const [formData,      setFormData]      = useState({});
   const [isEdit,        setIsEdit]        = useState(false);
@@ -123,10 +125,12 @@ export default function Employee() {
   };
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/members?keyword=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`);
       setResultData(res);
     } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   }, [keyword, page, limit]);
 
   useEffect(() => { load(); }, [load]);
@@ -361,7 +365,9 @@ export default function Employee() {
               animate="visible"
               variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.032 } } }}
             >
-              {data.length > 0 ? data.map((emp, i) => (
+              {loading ? (
+                <SkeletonTable rows={limit} cols={7} />
+              ) : data.length > 0 ? data.map((emp, i) => (
                 <motion.tr
                   key={emp.id}
                   custom={i}

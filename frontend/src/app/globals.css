@@ -174,4 +174,14 @@
     color: #5b8df8;
     font-weight: 700;
   }
+
+  /* Skeleton shimmer animation */
+  @keyframes skeleton-shimmer {
+    0%   { opacity: 0.45; }
+    50%  { opacity: 0.18; }
+    100% { opacity: 0.45; }
+  }
+  .skeleton-pulse {
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
 }
