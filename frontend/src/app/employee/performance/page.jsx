@@ -8,6 +8,7 @@ import PerformanceForm from "@/app/components/forms/PerformanceForm";
 import Drawer from "@/app/components/Drawer";
 import { Plus, Trash2, TrendingUp, Users, Award } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
+import { toast } from "@/lib/toast";
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -143,9 +144,10 @@ export default function Performance() {
   const handleDelete = async (id) => {
     try {
       await fetchWithAuth(`${apiBaseUrl}/api/performance/delete/${id}`, { method: "DELETE" });
+      toast(t("common.delete") + " — OK");
       loadLeaderboard();
       loadPerf();
-    } catch (err) { console.error(err); }
+    } catch (err) { toast(err.message, "error"); }
   };
 
   const sort = (key) => {

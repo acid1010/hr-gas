@@ -8,6 +8,7 @@ import PerformanceForm from "@/app/components/forms/PerformanceForm";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useAppSettings } from "@/lib/useAppSettings";
+import { toast } from "@/lib/toast";
 
 export default function PerformanceCreatePage() {
   const { p } = useAppSettings();
@@ -24,9 +25,10 @@ export default function PerformanceCreatePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      toast("Performance record saved");
       router.push("/employee/performance");
     } catch (err) {
-      console.error(err);
+      toast(err.message, "error");
     } finally {
       setSaving(false);
     }
