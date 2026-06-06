@@ -10,6 +10,20 @@ import { useAppSettings } from "@/lib/useAppSettings";
 
 const fmt = (ts, opts) => new Date(ts).toLocaleString("id-ID", opts);
 
+const DEPT_COLORS = {
+  production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
+  maintenance: "#ef4444", warehouse: "#10b981", hr: "#5b8df8",
+  ga: "#f97316", it: "#06b6d4",
+};
+function deptColor(d) { return DEPT_COLORS[(d || "").toLowerCase()] || "#4a5568"; }
+
+function getDrivePreview(url) {
+  if (!url) return "";
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const fileId = match ? match[1] : null;
+  return fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=s200` : url;
+}
+
 const rowVariants = {
   hidden:  { opacity: 0, y: 5 },
   visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.028, duration: 0.32, ease: [0.22, 1, 0.36, 1] } }),
@@ -336,12 +350,27 @@ export default function Attendance() {
 
                     {/* Name + dept */}
                     <td className="px-5 py-3.5">
-                      <span className="font-semibold" style={{ color: isUnregistered ? p.faint : p.text }}>
-                        {rec.users?.name || t("attendance.unregistered")}
-                      </span>
-                      {rec.users?.departement && (
-                        <span className="ml-2 text-[11px] font-bold" style={{ color: p.faint }}>{rec.users.departement.toUpperCase()}</span>
-                      )}
+                      <div className="flex items-center gap-2.5">
+                        {!isUnregistered && (
+                          <div className="relative w-7 h-7 rounded-full overflow-hidden shrink-0" style={{ background: deptColor(rec.users?.departement) }}>
+                            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-white">
+                              {(rec.users?.name || "?")[0].toUpperCase()}
+                            </div>
+                            {rec.users?.link_image && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={getDrivePreview(rec.users.link_image)} alt={rec.users.name} className="absolute inset-0 w-full h-full object-cover" />
+                            )}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <span className="font-semibold block truncate" style={{ color: isUnregistered ? p.faint : p.text }}>
+                            {rec.users?.name || t("attendance.unregistered")}
+                          </span>
+                          {rec.users?.departement && (
+                            <span className="text-[11px] font-bold" style={{ color: p.faint }}>{rec.users.departement.toUpperCase()}</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
 
                     {/* Date */}

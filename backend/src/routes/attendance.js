@@ -94,7 +94,7 @@ router.get("/", async (req, res) => {
       prisma.attendance.count({ where }),
       prisma.attendance.findMany({
         where,
-        include: { users: { select: { id: true, nik: true, name: true, departement: true, section: true } } },
+        include: { users: { select: { id: true, nik: true, name: true, departement: true, section: true, link_image: true } } },
         orderBy: { punch_time: "desc" },
         skip,
         take: Number(limit),
@@ -123,7 +123,7 @@ router.get("/summary", async (req, res) => {
     // Get all punch-in records (type 0) grouped by user and date
     const records = await prisma.attendance.findMany({
       where: { punch_time: { gte: start, lt: end }, punch_type: 0 },
-      include: { users: { select: { id: true, nik: true, name: true, departement: true } } },
+      include: { users: { select: { id: true, nik: true, name: true, departement: true, link_image: true } } },
       orderBy: { punch_time: "asc" },
     });
 

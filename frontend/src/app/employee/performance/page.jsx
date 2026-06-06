@@ -408,7 +408,20 @@ export default function Performance() {
                           {item.users?.nik}
                         </span>
                       </td>
-                      <td className="px-5 py-4 font-semibold" style={{ color: p.text }}>{item.users?.name}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="relative w-7 h-7 rounded-full overflow-hidden shrink-0" style={{ background: deptColor(item.users?.departement) }}>
+                            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-white">
+                              {(item.users?.name || "?")[0].toUpperCase()}
+                            </div>
+                            {item.users?.link_image && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={getDrivePreview(item.users.link_image)} alt={item.users.name} className="absolute inset-0 w-full h-full object-cover" />
+                            )}
+                          </div>
+                          <span className="font-semibold" style={{ color: p.text }}>{item.users?.name}</span>
+                        </div>
+                      </td>
                       <td className="px-5 py-4"><PerfBadge value={item.status} /></td>
                       <td className="px-5 py-4 text-sm max-w-xs truncate" style={{ color: p.muted }}>
                         {item.description || "—"}
