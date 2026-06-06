@@ -17,6 +17,13 @@ const DEPT_COLORS = {
 };
 function deptColor(d) { return DEPT_COLORS[(d || "").toLowerCase()] || "#4a5568"; }
 
+function getDrivePreview(url) {
+  if (!url) return "";
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const fileId = match ? match[1] : null;
+  return fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=s200` : url;
+}
+
 const WS_STYLE = {
   pkwt:     { bg: "rgba(91,141,248,0.11)",   color: "#5b8df8", dot: "#5b8df8" },
   borongan: { bg: "rgba(245,158,11,0.11)",   color: "#f59e0b", dot: "#f59e0b" },
@@ -355,10 +362,16 @@ export default function Employee() {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black shrink-0 text-white"
+                        className="relative w-9 h-9 rounded-full overflow-hidden shrink-0"
                         style={{ background: deptColor(emp.departement) }}
                       >
-                        {(emp.name || "?")[0].toUpperCase()}
+                        <div className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">
+                          {(emp.name || "?")[0].toUpperCase()}
+                        </div>
+                        {emp.link_image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={getDrivePreview(emp.link_image)} alt={emp.name} className="absolute inset-0 w-full h-full object-cover" />
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold leading-snug truncate" style={{ color: p.text }}>{emp.name}</p>

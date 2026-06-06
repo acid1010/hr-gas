@@ -45,6 +45,13 @@ const DEPT_COLORS = {
 };
 function deptColor(d) { return DEPT_COLORS[(d || "").toLowerCase()] || "#4a5568"; }
 
+function getDrivePreview(url) {
+  if (!url) return "";
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  const fileId = match ? match[1] : null;
+  return fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=s200` : url;
+}
+
 function useClock() {
   const [t, setT] = useState({ h: "00", m: "00", s: "00" });
   useEffect(() => {
@@ -347,10 +354,16 @@ export default function Dashboard() {
                       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
                     >
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 text-white"
+                        className="relative w-8 h-8 rounded-full overflow-hidden shrink-0"
                         style={{ background: deptColor(emp.departement) }}
                       >
-                        {(emp.name || "?")[0].toUpperCase()}
+                        <div className="absolute inset-0 flex items-center justify-center text-xs font-black text-white">
+                          {(emp.name || "?")[0].toUpperCase()}
+                        </div>
+                        {emp.link_image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={getDrivePreview(emp.link_image)} alt={emp.name} className="absolute inset-0 w-full h-full object-cover" />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold truncate" style={{ color: p.text }}>{emp.name}</p>
