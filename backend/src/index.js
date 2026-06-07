@@ -10,6 +10,7 @@ const authRoutes = require("./routes/auth");
 const membersRoutes = require("./routes/members");
 const performanceRoutes = require("./routes/performance");
 const attendanceRoutes = require("./routes/attendance");
+const overtimeRoutes = require("./routes/overtime");
 
 const port = process.env.PORT;
 
@@ -60,7 +61,7 @@ app.use(
   },
   performanceRoutes,
 );
-// app.use("/overtime", overtimeRoutes);
+app.use("/api/overtime", authMiddleware, overtimeRoutes);
 
 const startServer = async () => {
   try {
