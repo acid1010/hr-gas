@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require("../../libs/prisma");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { authMiddleware } = require("../middleware/auth");
 
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
@@ -80,26 +81,18 @@ router.post("/login", async (req, res) => {
 
 // Perhatikan urutan (req, res)
 router.post("/logout", (req, res) => {
-  // Hapus accessToken (tanpa path khusus)
   res.clearCookie("accessToken");
-
-  // Hapus refreshToken (WAJIB sertakan path jika saat set juga pakai path)
-  res.clearCookie("refreshToken", {
-    path: "/auth/refresh",
-  });
-
+  res.clearCookie("refreshToken");
   return res.status(200).json({ message: "logout success" });
 });
 
 router.post("/refresh_token", (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.cookies?.refreshToken;
   if (!refreshToken) {
     return res.status(401).json({ message: "No refresh token" });
   }
-
   try {
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH);
-
     const newAccessToken = jwt.sign(
       {
         id: decoded.id,
@@ -107,15 +100,32 @@ router.post("/refresh_token", (req, res) => {
         roleuser: decoded.roleuser,
         depart: decoded.depart,
         section: decoded.section,
+        access: decoded.access,
       },
       process.env.JWT_SECRET,
       { expiresIn: "20m" },
     );
-
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 20 * 60 * 1000,
+    });
     res.json({ accessToken: newAccessToken });
-  } catch (err) {
+  } catch {
     return res.status(401).json({ message: "Refresh token invalid" });
   }
+});
+
+router.get("/me", authMiddleware, (req, res) => {
+  res.json({
+    id: req.user.id,
+    username: req.user.username,
+    roleuser: req.user.roleuser,
+    depart: req.user.depart,
+    section: req.user.section,
+    access: req.user.access,
+  });
 });
 
 module.exports = router;
