@@ -49,5 +49,53 @@ router.post("/", requireRole("admin", "supervisor"), async (req, res) => {
   }
 });
 
+// GET / — list. Supervisor sees own; admin sees all. Filters: status, date, dept.
+router.get("/", requireRole("admin", "supervisor"), async (req, res) => {
+  try {
+    const { status, date, departement } = req.query;
+    const where = {
+      ...(isAdmin(req) ? {} : { submitted_by: req.user.id }),
+      ...(status && { status }),
+      ...(date && { date: new Date(date) }),
+      ...(departement && { departement: { contains: departement, mode: "insensitive" } }),
+    };
+    const data = await prisma.overtime_request.findMany({
+      where,
+      orderBy: { created_at: "desc" },
+      include: {
+        lines: { include: { worker: { select: { name: true, nik: true } } } },
+        submitter: { select: { name: true } },
+        approver: { select: { name: true } },
+      },
+    });
+    res.status(200).json({ data });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// GET /:id — one request. Supervisor only if owner; admin any.
+router.get("/:id", requireRole("admin", "supervisor"), async (req, res) => {
+  try {
+    const r = await prisma.overtime_request.findUnique({
+      where: { id: req.params.id },
+      include: {
+        lines: { include: { worker: { select: { name: true, nik: true } } } },
+        submitter: { select: { name: true } },
+        approver: { select: { name: true } },
+      },
+    });
+    if (!r) return res.status(404).json({ error: "Not found" });
+    if (!isAdmin(req) && r.submitted_by !== req.user.id) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    res.status(200).json({ data: r });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 module.exports = router;
 module.exports.computeHours = computeHours;
