@@ -40,7 +40,7 @@ const fetchWithAuth = async (url, option = {}) => {
       isRefreshing = true;
 
       try {
-        const refreshRes = await fetch(`${apiBaseUrl}/auth/refresh`, {
+        const refreshRes = await fetch(`${apiBaseUrl}/auth/refresh_token`, {
           method: "POST",
           credentials: "include",
         });
