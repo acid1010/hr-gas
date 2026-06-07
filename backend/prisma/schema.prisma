@@ -25,19 +25,28 @@ model users {
   hash            String?           @db.Char(255)
   link_image      String?           @db.VarChar(255)
   deletedAt       DateTime?         @db.Timestamp(6)
-  overtime_detail overtime_detail[]
-  overtime_permit overtime_permit[]
+  ot_submitted    overtime_request[] @relation("ot_submitter")
+  ot_approved     overtime_request[] @relation("ot_approver")
+  ot_lines        overtime_line[]    @relation("ot_worker")
   performance     performance[]
   attendance      attendance[]
 }
 
-model overtime_permit {
-  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String?    @db.Uuid
-  permission String?    @db.VarChar(255)
-  created_at DateTime?  @default(now()) @db.Timestamp(6)
-  overtime   overtime[]
-  users      users?     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model overtime_request {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  submitted_by  String          @db.Uuid
+  departement   String?         @db.VarChar(255)
+  date          DateTime        @db.Date
+  shift         Int?
+  status        String          @default("pending") @db.VarChar(20)
+  approved_by   String?         @db.Uuid
+  approved_at   DateTime?       @db.Timestamp(6)
+  reject_reason String?         @db.VarChar(255)
+  created_at    DateTime        @default(now()) @db.Timestamp(6)
+  updated_at    DateTime        @default(now()) @db.Timestamp(6)
+  submitter     users           @relation("ot_submitter", fields: [submitted_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver      users?          @relation("ot_approver", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lines         overtime_line[]
 }
 
 model performance {
@@ -51,16 +60,18 @@ model performance {
   users       users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-model overtime {
-  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  overtime_permit_id String?           @db.Uuid
-  departement        String?           @db.VarChar(255)
-  dates              DateTime?         @db.Date
-  shift              Int?
-  created_at         DateTime?         @default(now()) @db.Timestamp(6)
-  updated_at         DateTime?         @default(now()) @db.Timestamp(6)
-  overtime_permit    overtime_permit?  @relation(fields: [overtime_permit_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  overtime_detail    overtime_detail[]
+model overtime_line {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  request_id String           @db.Uuid
+  user_id    String           @db.Uuid
+  start_time DateTime         @db.Timestamp(6)
+  end_time   DateTime         @db.Timestamp(6)
+  hours      Decimal          @db.Decimal(5, 2)
+  reason     String?          @db.VarChar(255)
+  multiplier Decimal?         @db.Decimal(4, 2)
+  created_at DateTime         @default(now()) @db.Timestamp(6)
+  request    overtime_request @relation(fields: [request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  worker     users            @relation("ot_worker", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model attendance {
@@ -73,17 +84,4 @@ model attendance {
   users      users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([device_uid, punch_time])
-}
-
-model overtime_detail {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id     String?   @db.Uuid
-  necessary   String?   @db.VarChar(255)
-  start_time  DateTime? @db.Date
-  end_time    DateTime? @db.Date
-  created_at  DateTime? @default(now()) @db.Timestamp(6)
-  updated_at  DateTime? @default(now()) @db.Timestamp(6)
-  overtime_id String?   @db.Uuid
-  overtime    overtime? @relation(fields: [overtime_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  users       users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
