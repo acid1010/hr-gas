@@ -1,137 +1,152 @@
 "use client";
-
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Clock, CalendarClock, FileSpreadsheet, Users, Hourglass } from "lucide-react";
+import { Plus, Check, X, FileSpreadsheet, Clock } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
+import fetchWithAuth from "@/lib/fetchWithAuth";
+import apiBaseUrl from "@/lib/urlEndPoint";
+import Drawer from "@/app/components/Drawer";
+import OvertimeForm from "./OvertimeForm";
 
-const PLANNED = [
-  { icon: Clock,            title: "Log Overtime",       desc: "Record employee overtime hours with approval workflow" },
-  { icon: CalendarClock,    title: "Monthly Summary",    desc: "Aggregate overtime per employee per month with pay calculation" },
-  { icon: FileSpreadsheet,  title: "Excel Export",       desc: "Export overtime reports in XLSX format for payroll" },
-  { icon: Users,            title: "Department View",    desc: "Track overtime distribution across departments" },
-];
-
-const cardVariants = {
-  hidden:   { opacity: 0, y: 20 },
-  visible:  (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.48, ease: [0.22, 1, 0.36, 1] } }),
-};
+const STATUS_COLOR = { pending: "#d6a23e", approved: "#3fa66a", rejected: "#e06666" };
 
 export default function OvertimePage() {
   const { p } = useAppSettings();
-  const router = useRouter();
+  const [role, setRole] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const isAdmin = role === "admin";
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = statusFilter ? `?status=${statusFilter}` : "";
+      const r = await fetchWithAuth(`${apiBaseUrl}/api/overtime${q}`);
+      setRequests(r.data || []);
+    } catch { setRequests([]); }
+    finally { setLoading(false); }
+  }, [statusFilter]);
+
+  useEffect(() => {
+    fetchWithAuth(`${apiBaseUrl}/auth/me`).then((u) => setRole(u.roleuser)).catch(() => setRole(null));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const approve = async (id) => {
+    try { await fetchWithAuth(`${apiBaseUrl}/api/overtime/${id}/approve`, { method: "PATCH" }); load(); }
+    catch (e) { alert(e?.error || "Approve failed"); }
+  };
+  const reject = async (id) => {
+    const reason = prompt("Reject reason:");
+    if (!reason) return;
+    try { await fetchWithAuth(`${apiBaseUrl}/api/overtime/${id}/reject`, { method: "PATCH", body: JSON.stringify({ reason }) }); load(); }
+    catch (e) { alert(e?.error || "Reject failed"); }
+  };
+  const exportExcel = () => {
+    const month = new Date().toISOString().slice(0, 7);
+    window.open(`${apiBaseUrl}/api/overtime/export/excel?month=${month}`, "_blank");
+  };
 
   return (
     <main className="overflow-x-hidden w-full max-w-full">
-      <div className="p-8 min-h-screen transition-colors duration-300" style={{ background: p.pageBg }}>
-
+      <div className="p-8 min-h-screen" style={{ background: p.pageBg }}>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-12 flex items-center gap-4"
-        >
-          <button
-            onClick={() => router.back()}
-            className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150 shrink-0"
-            style={{ background: p.cardBg, border: `1px solid ${p.border}`, color: p.muted }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.4)"; e.currentTarget.style.color = p.text; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = p.border; e.currentTarget.style.color = p.muted; }}
-          >
-            <ArrowLeft size={16} />
-          </button>
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-1" style={{ color: p.primary }}>
-              HR Management
-            </p>
-            <h1 className="text-[1.8rem] font-black tracking-tight leading-none" style={{ color: p.text }}>
-              Overtime
-            </h1>
+            <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-1" style={{ color: p.primary }}>HR Management</p>
+            <h1 className="text-[1.8rem] font-black tracking-tight leading-none" style={{ color: p.text }}>Overtime</h1>
           </div>
-        </motion.div>
-
-        {/* Under construction hero */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.08, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="relative overflow-hidden rounded-3xl mb-8 flex flex-col items-center justify-center text-center py-20 px-8"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-        >
-          {/* Ambient glow */}
-          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(91,141,248,0.06), transparent 70%)" }} />
-
-          <motion.div
-            animate={{ rotate: [0, -8, 8, -4, 0] }}
-            transition={{ duration: 3.5, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
-            className="w-20 h-20 rounded-3xl flex items-center justify-center mb-7"
-            style={{ background: "rgba(91,141,248,0.1)", border: "1px solid rgba(91,141,248,0.18)" }}
-          >
-            <Hourglass size={36} style={{ color: "#5b8df8" }} />
-          </motion.div>
-
-          <p className="text-[10px] font-black tracking-[0.3em] uppercase mb-3" style={{ color: "#5b8df8" }}>
-            Coming Soon
-          </p>
-          <h2 className="text-3xl font-black tracking-tight mb-4" style={{ color: p.text }}>
-            Overtime Tracking
-          </h2>
-          <p className="text-sm leading-relaxed max-w-sm" style={{ color: p.muted }}>
-            Overtime management is currently in development. Log, approve, and report employee overtime hours — integrated with payroll.
-          </p>
-
-          {/* Progress indicator */}
-          <div className="mt-8 flex items-center gap-3">
-            <div className="h-1.5 rounded-full overflow-hidden w-48" style={{ background: p.border }}>
-              <motion.div
-                className="h-full rounded-full"
-                style={{ background: "linear-gradient(90deg, #3b6fd4, #5b8df8)" }}
-                initial={{ width: 0 }}
-                animate={{ width: "40%" }}
-                transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
-              />
-            </div>
-            <span className="text-xs font-black tabular-nums" style={{ color: p.faint }}>40%</span>
+          <div className="flex gap-2">
+            {isAdmin && (
+              <button onClick={exportExcel} className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-bold"
+                style={{ background: p.cardBg, border: `1px solid ${p.border}`, color: p.text }}>
+                <FileSpreadsheet size={14} /> Export
+              </button>
+            )}
+            <button onClick={() => setDrawerOpen(true)} className="flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-black"
+              style={{ background: p.primary, color: "#fff" }}>
+              <Plus size={14} /> New Overtime
+            </button>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Planned features grid */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-          className="text-[10px] font-black tracking-[0.25em] uppercase mb-4"
-          style={{ color: p.faint }}
-        >
-          Planned Features
-        </motion.p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {PLANNED.map(({ icon: Icon, title, desc }, i) => (
-            <motion.div
-              key={title}
-              custom={i}
-              initial="hidden"
-              animate="visible"
-              variants={cardVariants}
-              className="rounded-2xl p-5 flex flex-col gap-3 transition-colors duration-150"
-              style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.3)"; e.currentTarget.style.background = p.rowHover; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = p.border; e.currentTarget.style.background = p.cardBg; }}
-            >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(91,141,248,0.1)" }}>
-                <Icon size={17} style={{ color: "#5b8df8" }} />
-              </div>
-              <div>
-                <p className="text-sm font-black mb-1" style={{ color: p.text }}>{title}</p>
-                <p className="text-xs leading-relaxed" style={{ color: p.faint }}>{desc}</p>
-              </div>
-            </motion.div>
+        {/* Status filter */}
+        <div className="flex gap-2 mb-5">
+          {["", "pending", "approved", "rejected"].map((s) => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-bold capitalize"
+              style={{
+                background: statusFilter === s ? p.primary : p.cardBg,
+                color: statusFilter === s ? "#fff" : p.muted,
+                border: `1px solid ${p.border}`,
+              }}>
+              {s || "all"}
+            </button>
           ))}
         </div>
 
+        {/* List */}
+        {loading ? (
+          <p style={{ color: p.muted }} className="text-sm">Loading…</p>
+        ) : requests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20" style={{ color: p.faint }}>
+            <Clock size={32} className="mb-3 opacity-50" />
+            <p className="text-sm">No overtime requests.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {requests.map((r) => (
+              <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                className="p-4 rounded-2xl" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[13px] font-black" style={{ color: p.text }}>
+                      {new Date(r.date).toISOString().slice(0, 10)}
+                    </span>
+                    <span className="text-[11px] font-medium" style={{ color: p.muted }}>
+                      {r.departement || "—"} · {r.lines?.length || 0} worker(s)
+                      {r.shift ? ` · shift ${r.shift}` : ""}
+                    </span>
+                    {isAdmin && r.submitter?.name && (
+                      <span className="text-[11px]" style={{ color: p.faint }}>by {r.submitter.name}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide"
+                      style={{ background: `${STATUS_COLOR[r.status]}22`, color: STATUS_COLOR[r.status] }}>
+                      {r.status}
+                    </span>
+                    {isAdmin && r.status === "pending" && (
+                      <>
+                        <button onClick={() => approve(r.id)} className="p-1.5 rounded-lg" style={{ border: `1px solid ${p.border}`, color: "#3fa66a" }}><Check size={14} /></button>
+                        <button onClick={() => reject(r.id)} className="p-1.5 rounded-lg" style={{ border: `1px solid ${p.border}`, color: "#e06666" }}><X size={14} /></button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {r.lines?.map((l) => (
+                    <span key={l.id} className="text-[11px] px-2 py-1 rounded-lg"
+                      style={{ background: p.inputBg, color: p.muted }}>
+                      {l.worker?.name || "?"} · {Number(l.hours)}h
+                    </span>
+                  ))}
+                </div>
+                {r.status === "rejected" && r.reject_reason && (
+                  <p className="text-[11px] mt-2" style={{ color: "#e06666" }}>Rejected: {r.reject_reason}</p>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
+
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="New Overtime" subtitle="Submit a batch for approval">
+        <OvertimeForm onSuccess={() => { setDrawerOpen(false); load(); }} />
+      </Drawer>
     </main>
   );
 }
