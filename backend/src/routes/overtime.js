@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../../libs/prisma");
 const { requireRole } = require("../middleware/auth");
+const XLSX = require("xlsx");
 
 function computeHours(start, end) {
   const s = new Date(start).getTime();
@@ -72,6 +73,55 @@ router.get("/", requireRole("admin", "supervisor"), async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// GET /export/excel?month=YYYY-MM — admin only. Approved overtime for payroll.
+router.get("/export/excel", requireRole("admin"), async (req, res) => {
+  try {
+    const month = req.query.month || new Date().toISOString().slice(0, 7); // YYYY-MM
+    const start = new Date(`${month}-01T00:00:00`);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+
+    const requests = await prisma.overtime_request.findMany({
+      where: { status: "approved", date: { gte: start, lt: end } },
+      include: { lines: { include: { worker: { select: { name: true, nik: true } } } } },
+      orderBy: { date: "asc" },
+    });
+
+    const rows = [];
+    for (const r of requests) {
+      for (const l of r.lines) {
+        rows.push({
+          NIK: l.worker?.nik ? String(l.worker.nik) : "",
+          Nama: l.worker?.name || "",
+          Departemen: r.departement || "",
+          Tanggal: new Date(r.date).toISOString().slice(0, 10),
+          "Jam Mulai": new Date(l.start_time).toISOString().slice(11, 16),
+          "Jam Selesai": new Date(l.end_time).toISOString().slice(11, 16),
+          "Total Jam": Number(l.hours),
+          Pengali: l.multiplier != null ? Number(l.multiplier) : "",
+          Keterangan: l.reason || "",
+        });
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 12 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 30 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, `Lembur ${month}`);
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="lembur_${month}.xlsx"`);
+    res.status(200).send(buf);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 });
 
