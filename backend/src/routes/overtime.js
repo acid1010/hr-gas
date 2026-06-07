@@ -97,5 +97,47 @@ router.get("/:id", requireRole("admin", "supervisor"), async (req, res) => {
   }
 });
 
+// PATCH /:id/approve — admin only
+router.patch("/:id/approve", requireRole("admin"), async (req, res) => {
+  try {
+    const r = await prisma.overtime_request.findUnique({ where: { id: req.params.id } });
+    if (!r) return res.status(404).json({ error: "Not found" });
+    if (r.status !== "pending") {
+      return res.status(409).json({ error: `Cannot approve a ${r.status} request` });
+    }
+    const updated = await prisma.overtime_request.update({
+      where: { id: req.params.id },
+      data: { status: "approved", approved_by: req.user.id, approved_at: new Date(), updated_at: new Date() },
+    });
+    res.status(200).json({ message: "Approved", data: updated });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// PATCH /:id/reject — admin only, requires reason
+router.patch("/:id/reject", requireRole("admin"), async (req, res) => {
+  try {
+    const { reason } = req.body;
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({ error: "reject reason required" });
+    }
+    const r = await prisma.overtime_request.findUnique({ where: { id: req.params.id } });
+    if (!r) return res.status(404).json({ error: "Not found" });
+    if (r.status !== "pending") {
+      return res.status(409).json({ error: `Cannot reject a ${r.status} request` });
+    }
+    const updated = await prisma.overtime_request.update({
+      where: { id: req.params.id },
+      data: { status: "rejected", reject_reason: reason.trim(), approved_by: req.user.id, approved_at: new Date(), updated_at: new Date() },
+    });
+    res.status(200).json({ message: "Rejected", data: updated });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 module.exports = router;
 module.exports.computeHours = computeHours;
