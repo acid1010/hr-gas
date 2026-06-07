@@ -139,5 +139,71 @@ router.patch("/:id/reject", requireRole("admin"), async (req, res) => {
   }
 });
 
+// shared guard: load request, enforce owner/admin + pending
+async function loadEditable(req, res) {
+  const r = await prisma.overtime_request.findUnique({ where: { id: req.params.id } });
+  if (!r) { res.status(404).json({ error: "Not found" }); return null; }
+  if (!isAdmin(req) && r.submitted_by !== req.user.id) {
+    res.status(403).json({ error: "Forbidden" }); return null;
+  }
+  if (r.status !== "pending") {
+    res.status(409).json({ error: `Cannot modify a ${r.status} request` }); return null;
+  }
+  return r;
+}
+
+// PUT /:id — replace lines + header fields (pending only)
+router.put("/:id", requireRole("admin", "supervisor"), async (req, res) => {
+  try {
+    const r = await loadEditable(req, res);
+    if (!r) return;
+    const { departement, date, shift, lines } = req.body;
+    if (!Array.isArray(lines) || lines.length === 0) {
+      return res.status(400).json({ error: "at least one line required" });
+    }
+    const lineData = lines.map((l) => ({
+      user_id: l.user_id,
+      start_time: new Date(l.start_time),
+      end_time: new Date(l.end_time),
+      hours: computeHours(l.start_time, l.end_time),
+      reason: l.reason || null,
+    }));
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.overtime_line.deleteMany({ where: { request_id: r.id } });
+      return tx.overtime_request.update({
+        where: { id: r.id },
+        data: {
+          departement: departement ?? r.departement,
+          date: date ? new Date(date) : r.date,
+          shift: shift != null ? Number(shift) : r.shift,
+          updated_at: new Date(),
+          lines: { create: lineData },
+        },
+        include: { lines: true },
+      });
+    });
+    res.status(200).json({ message: "Updated", data: updated });
+  } catch (error) {
+    if (error.message.includes("end_time")) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// DELETE /:id — pending only, owner/admin (lines cascade)
+router.delete("/:id", requireRole("admin", "supervisor"), async (req, res) => {
+  try {
+    const r = await loadEditable(req, res);
+    if (!r) return;
+    await prisma.overtime_request.delete({ where: { id: r.id } });
+    res.status(200).json({ message: "Deleted" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 module.exports = router;
 module.exports.computeHours = computeHours;
