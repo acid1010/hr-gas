@@ -3,6 +3,8 @@ const express = require("express");
 const app = express();
 const redis = require("./config/redis");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const { authMiddleware } = require("./middleware/auth");
 
 const authRoutes = require("./routes/auth");
 const membersRoutes = require("./routes/members");
@@ -40,10 +42,24 @@ const optionsCors = {
 app.use(cors(optionsCors));
 app.use(express.json());
 app.use(express.urlencoded({ limit: "5mb", extended: true }));
+app.use(cookieParser());
+
+// Auth routes are public (login/refresh must work without a valid access token)
 app.use("/auth", authRoutes);
-app.use("/members", membersRoutes);
-app.use("/api/performance", performanceRoutes);
-app.use("/api/attendance", attendanceRoutes);
+
+// Protected routes
+app.use("/members", authMiddleware, membersRoutes);
+app.use("/api/attendance", authMiddleware, attendanceRoutes);
+
+// /api/performance: leaderboard is public (TV /display screens), everything else requires auth
+app.use(
+  "/api/performance",
+  (req, res, next) => {
+    if (req.method === "GET" && req.path === "/leaderboard") return next();
+    return authMiddleware(req, res, next);
+  },
+  performanceRoutes,
+);
 // app.use("/overtime", overtimeRoutes);
 
 const startServer = async () => {
