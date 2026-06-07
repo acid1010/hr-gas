@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ImageOff, LinkIcon } from "lucide-react";
+import { ImageOff, LinkIcon, ChevronDown } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 
 const DEPT_COLORS = {
@@ -70,7 +70,28 @@ const EmployeeForm = ({ formData, onChange }) => {
 
   const onFocus = (e) => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.1)"; };
   const onBlur  = (e) => { e.target.style.borderColor = p.border2;   e.target.style.boxShadow = "none"; };
-  const selectStyle = { ...inputStyle, appearance: "none" };
+  const selectStyle = { ...inputStyle, appearance: "none", paddingRight: "2.25rem" };
+
+  function SelectField({ label, name, value, onChange, children }) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <label style={labelStyle}>{label}</label>
+        <div className="relative">
+          <select
+            name={name}
+            value={value}
+            style={selectStyle}
+            onChange={onChange}
+            onFocus={onFocus}
+            onBlur={onBlur}
+          >
+            {children}
+          </select>
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -161,64 +182,76 @@ const EmployeeForm = ({ formData, onChange }) => {
       </Field>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Status" labelStyle={labelStyle}>
-          <select
-            name="status" value={formData?.status || ""}
-            style={selectStyle} onChange={handleChange}
-            onFocus={onFocus} onBlur={onBlur}
-          >
-            <option value="">Select status</option>
-            <option value="aktif">Aktif</option>
-            <option value="non-aktif">Non-Aktif</option>
-          </select>
-        </Field>
+        <SelectField label="Status" name="status" value={formData?.status || ""} onChange={handleChange}>
+          <option value="">Select status</option>
+          <option value="aktif">Aktif</option>
+          <option value="non-aktif">Non-Aktif</option>
+        </SelectField>
 
-        <Field label="Worker Status" labelStyle={labelStyle}>
-          <select
-            name="worker_stats" value={formData?.worker_stats || ""}
-            style={selectStyle} onChange={handleChange}
-            onFocus={onFocus} onBlur={onBlur}
-          >
-            <option value="">Select</option>
-            <option value="magang">Magang</option>
-            <option value="borongan">Borongan</option>
-            <option value="pkwt">PKWT</option>
-          </select>
-        </Field>
+        <SelectField label="Worker Status" name="worker_stats" value={formData?.worker_stats || ""} onChange={handleChange}>
+          <option value="">Select</option>
+          <option value="magang">Magang</option>
+          <option value="borongan">Borongan</option>
+          <option value="pkwt">PKWT</option>
+        </SelectField>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Position" labelStyle={labelStyle}>
-          <select
-            name="section" value={formData?.section || ""}
-            style={selectStyle} onChange={handleChange}
-            onFocus={onFocus} onBlur={onBlur}
-          >
-            <option value="">Select</option>
-            <option value="manager">Manager</option>
-            <option value="spv">Supervisor</option>
-            <option value="admin">Admin</option>
-            <option value="operator">Operator</option>
-          </select>
-        </Field>
+        <div className="flex flex-col gap-1.5">
+          <label style={labelStyle}>Position</label>
+          <input
+            name="section"
+            type="text"
+            list="position-list"
+            placeholder="e.g. Operator, Supervisor…"
+            value={formData?.section || ""}
+            style={inputStyle}
+            onChange={handleChange}
+            onFocus={onFocus}
+            onBlur={onBlur}
+          />
+          <datalist id="position-list">
+            <option value="Manager" />
+            <option value="Supervisor" />
+            <option value="Admin" />
+            <option value="Operator" />
+            <option value="Technician" />
+            <option value="Staff" />
+            <option value="Security" />
+            <option value="Driver" />
+          </datalist>
+        </div>
 
-        <Field label="Department" labelStyle={labelStyle}>
-          <select
-            name="departement" value={formData?.departement || ""}
-            style={selectStyle} onChange={handleChange}
-            onFocus={onFocus} onBlur={onBlur}
-          >
-            <option value="">Select</option>
-            <option value="production">Production</option>
-            <option value="engineering">Engineering</option>
-            <option value="qc">Quality Control</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="warehouse">Warehouse</option>
-            <option value="hr">HR</option>
-            <option value="ga">GA</option>
-            <option value="it">IT</option>
-          </select>
-        </Field>
+        <div className="flex flex-col gap-1.5">
+          <label style={labelStyle}>Department</label>
+          <div className="relative">
+            <select
+              name="departement"
+              value={formData?.departement || ""}
+              style={selectStyle}
+              onChange={handleChange}
+              onFocus={onFocus}
+              onBlur={onBlur}
+            >
+              <option value="">Select</option>
+              <option value="production">Production</option>
+              <option value="engineering">Engineering</option>
+              <option value="qc">Quality Control</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="warehouse">Warehouse</option>
+              <option value="hr">HR</option>
+              <option value="ga">GA</option>
+              <option value="it">IT</option>
+            </select>
+            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
+          </div>
+          {dept && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+              <span className="text-[10px] font-black uppercase tracking-widest" style={{ color }}>{dept}</span>
+            </div>
+          )}
+        </div>
       </div>
 
     </div>

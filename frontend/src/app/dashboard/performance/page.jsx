@@ -2,12 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, AlertTriangle, Fingerprint, Building2 } from "lucide-react";
-import Image from "next/image";
+import { ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 
 const ITEMS_PER_PAGE = 5;
+
+const DEPT_COLORS = {
+  production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
+  maintenance: "#ef4444", warehouse: "#10b981", hr: "#5b8df8",
+  ga: "#f97316", it: "#06b6d4",
+};
+const deptColor = (d) => DEPT_COLORS[(d || "").toLowerCase()] || "#4a5568";
 
 const getDrivePreview = (url) => {
   if (!url) return "";
@@ -18,96 +24,91 @@ const getDrivePreview = (url) => {
 
 /* ---------- single employee row card ---------- */
 function EmployeeCard({ emp, index }) {
+  const dc = deptColor(emp.departement);
+  const globalRank = index + 1;
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: -24 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="flex items-center gap-6 rounded-2xl overflow-hidden h-full"
+      transition={{ delay: (index % ITEMS_PER_PAGE) * 0.055, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className="relative flex items-center overflow-hidden rounded-2xl h-full"
       style={{
         background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(239,68,68,0.14)",
+        border: "1px solid rgba(239,68,68,0.18)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
       }}
     >
-      {/* Rank */}
+      {/* Left rank stripe */}
       <div
-        className="shrink-0 flex items-center justify-center font-black tabular-nums"
+        className="shrink-0 flex items-center justify-center font-black tabular-nums select-none"
         style={{
-          width: 80,
+          width: 76,
           alignSelf: "stretch",
-          background: "rgba(239,68,68,0.06)",
-          borderRight: "1px solid rgba(239,68,68,0.1)",
-          color: "rgba(239,68,68,0.3)",
-          fontSize: "clamp(2rem, 4vw, 3.5rem)",
+          background: "rgba(239,68,68,0.1)",
+          borderRight: "1px solid rgba(239,68,68,0.18)",
+          color: "#ef4444",
+          fontSize: "clamp(1.8rem, 3.5vw, 3rem)",
+          letterSpacing: "-0.04em",
         }}
       >
-        {index + 1}
+        {globalRank}
       </div>
 
-      {/* Photo */}
-      <div
-        className="shrink-0 rounded-xl overflow-hidden"
-        style={{
-          width: 72,
-          height: 72,
-          background: "#1a2035",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}
-      >
-        {emp.photo ? (
-          <Image
-            src={getDrivePreview(emp.photo)}
-            alt={emp.name}
-            width={72}
-            height={72}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div
-            className="w-full h-full flex items-center justify-center font-black text-2xl"
-            style={{ color: "#4a5568" }}
-          >
+      {/* Dept-colored left accent bar */}
+      <div className="absolute left-[76px] top-0 bottom-0 w-1" style={{ background: dc, opacity: 0.7 }} />
+
+      {/* Avatar */}
+      <div className="shrink-0 ml-4 mr-4">
+        <div
+          className="relative rounded-2xl overflow-hidden"
+          style={{ width: 60, height: 60, background: dc, boxShadow: `0 0 0 2px ${dc}40` }}
+        >
+          <div className="absolute inset-0 flex items-center justify-center font-black text-white" style={{ fontSize: "1.5rem" }}>
             {(emp.name || "?")[0].toUpperCase()}
           </div>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <p className="font-black text-white truncate" style={{ fontSize: "clamp(1rem, 2vw, 1.5rem)" }}>
-          {emp.name}
-        </p>
-        <div className="flex items-center gap-4 mt-1.5">
-          <div className="flex items-center gap-1.5">
-            <Fingerprint size={13} style={{ color: "#5b8df8" }} />
-            <span className="font-mono text-sm font-bold" style={{ color: "#6b7a99" }}>{emp.nik}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Building2 size={13} style={{ color: "#5b8df8" }} />
-            <span className="text-sm font-bold uppercase tracking-wide truncate" style={{ color: "#6b7a99" }}>
-              {emp.departement}
-            </span>
-          </div>
+          {emp.photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={getDrivePreview(emp.photo)}
+              alt={emp.name}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
         </div>
       </div>
 
-      {/* Description badge + worst pill */}
-      <div className="shrink-0 flex items-center gap-3 pr-6">
+      {/* Info */}
+      <div className="flex-1 min-w-0 py-3">
+        <p className="font-black text-white leading-tight truncate" style={{ fontSize: "clamp(0.95rem, 1.8vw, 1.35rem)" }}>
+          {emp.name}
+        </p>
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+          <span className="font-mono text-sm font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(91,141,248,0.1)", color: "#5b8df8" }}>
+            {emp.nik}
+          </span>
+          <span
+            className="text-xs font-black px-2 py-0.5 rounded-lg uppercase tracking-wide"
+            style={{ background: `${dc}18`, color: dc }}
+          >
+            {emp.departement || "—"}
+          </span>
+        </div>
+      </div>
+
+      {/* Right: description + status */}
+      <div className="shrink-0 flex items-center gap-3 pr-5">
         {emp.description && emp.description !== "-" && (
-          <div
-            className="px-4 py-2 rounded-xl text-sm font-semibold max-w-[200px] truncate"
-            style={{
-              background: "rgba(239,68,68,0.08)",
-              border: "1px solid rgba(239,68,68,0.18)",
-              color: "#ef4444",
-            }}
+          <p
+            className="text-sm font-semibold max-w-[220px] truncate px-3 py-1.5 rounded-xl"
+            style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.15)", color: "rgba(239,68,68,0.8)" }}
           >
             {emp.description}
-          </div>
+          </p>
         )}
         <span
-          className="px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest"
-          style={{ background: "rgba(239,68,68,0.12)", color: "#ef4444" }}
+          className="px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.14em]"
+          style={{ background: "rgba(239,68,68,0.14)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.22)" }}
         >
           Worst
         </span>

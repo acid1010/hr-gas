@@ -26,11 +26,11 @@ function getDrivePreview(url) {
 }
 
 const NAV_ITEMS = [
-  { label: "Dashboard",   href: "/dashboard",             icon: LayoutDashboard },
-  { label: "Employees",   href: "/employee",              icon: Users },
-  { label: "Attendance",  href: "/attendance",            icon: Fingerprint },
-  { label: "Performance", href: "/employee/performance",  icon: TrendingUp },
-  { label: "Overtime",    href: "/overtime",              icon: Clock },
+  { label: "Dashboard",   href: "/dashboard",             icon: LayoutDashboard, shortcut: "⌘1" },
+  { label: "Employees",   href: "/employee",              icon: Users,           shortcut: "⌘2" },
+  { label: "Attendance",  href: "/attendance",            icon: Fingerprint,     shortcut: "⌘3" },
+  { label: "Performance", href: "/employee/performance",  icon: TrendingUp,      shortcut: "⌘4" },
+  { label: "Overtime",    href: "/overtime",              icon: Clock,           shortcut: "⌘5", badge: "Soon" },
 ];
 
 export default function CommandPalette() {
@@ -50,12 +50,17 @@ export default function CommandPalette() {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setOpen(v => !v); }
       if (e.key === "Escape") setOpen(false);
+      // ⌘1-5 direct navigation (only when palette is closed)
+      if ((e.metaKey || e.ctrlKey) && !open) {
+        const idx = ["1","2","3","4","5"].indexOf(e.key);
+        if (idx !== -1 && NAV_ITEMS[idx]) { e.preventDefault(); router.push(NAV_ITEMS[idx].href); }
+      }
     };
     const onCmd = () => setOpen(v => !v);
     window.addEventListener("keydown", onKey);
     window.addEventListener("gas:cmd", onCmd);
     return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("gas:cmd", onCmd); };
-  }, []);
+  }, [open, router]);
 
   /* focus input when palette opens */
   useEffect(() => {
@@ -193,9 +198,30 @@ export default function CommandPalette() {
                             color: active ? p.text : p.muted,
                           }}
                         >
-                          <Icon size={15} style={{ color: active ? "#5b8df8" : p.faint }} />
+                          <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                            style={{ background: active ? "rgba(91,141,248,0.15)" : p.inputBg }}
+                          >
+                            <Icon size={14} style={{ color: active ? "#5b8df8" : p.faint }} />
+                          </div>
                           <span className="flex-1 text-left">{item.label}</span>
-                          <ChevronRight size={13} style={{ color: p.faint, opacity: active ? 1 : 0 }} />
+                          {item.badge && (
+                            <span
+                              className="text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wider uppercase"
+                              style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                          {item.shortcut && !item.badge && (
+                            <kbd
+                              className="text-[9px] font-black px-1.5 py-0.5 rounded-md"
+                              style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.faint }}
+                            >
+                              {item.shortcut}
+                            </kbd>
+                          )}
+                          <ChevronRight size={12} style={{ color: p.faint, opacity: active ? 1 : 0, transition: "opacity 0.1s" }} />
                         </button>
                       );
                     })}

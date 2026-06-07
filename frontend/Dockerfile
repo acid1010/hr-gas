@@ -7,6 +7,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# API URL injected at build time so NEXT_PUBLIC_* gets baked into the bundle
+ARG NEXT_PUBLIC_API_BASE_URL_PRODUCTION
+ENV NEXT_PUBLIC_API_BASE_URL_PRODUCTION=$NEXT_PUBLIC_API_BASE_URL_PRODUCTION
 RUN npm run build
 
 FROM node:20-alpine AS runner

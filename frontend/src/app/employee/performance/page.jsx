@@ -1,14 +1,33 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import PerformanceForm from "@/app/components/forms/PerformanceForm";
 import Drawer from "@/app/components/Drawer";
-import { Plus, Trash2, TrendingUp, Users, Award, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { Plus, Trash2, TrendingUp, Users, Award, ArrowDown, ArrowUp, ArrowUpDown, Search } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { toast } from "@/lib/toast";
+
+function Counter({ to, duration = 1.2 }) {
+  const ref = useRef(null);
+  const prev = useRef(0);
+  useEffect(() => {
+    const from = prev.current;
+    const t0 = performance.now();
+    const ms = duration * 1000;
+    const tick = (now) => {
+      const p = Math.min((now - t0) / ms, 1);
+      const ease = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+      if (ref.current) ref.current.textContent = Math.round(from + (to - from) * ease);
+      if (p < 1) requestAnimationFrame(tick);
+      else prev.current = to;
+    };
+    requestAnimationFrame(tick);
+  }, [to, duration]);
+  return <span ref={ref}>0</span>;
+}
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -107,6 +126,8 @@ export default function Performance() {
   const [sortKey,     setSortKey]     = useState("combined_score");
   const [sortDir,     setSortDir]     = useState(-1);
   const [tab,         setTab]         = useState("leaderboard");
+  const [statusFilter,  setStatusFilter]  = useState("");
+  const [perfNameFilter, setPerfNameFilter] = useState("");
 
   const loadLeaderboard = useCallback(async () => {
     try {
@@ -157,6 +178,15 @@ export default function Performance() {
   };
 
   const sorted = [...leaderboard].sort((a, b) => sortDir * (b[sortKey] - a[sortKey]));
+  const filteredPerf = perfRecords.filter(r => {
+    if (statusFilter && (r.status || "").toLowerCase() !== statusFilter) return false;
+    if (perfNameFilter.trim()) {
+      const q = perfNameFilter.toLowerCase();
+      return (r.users?.name || "").toLowerCase().includes(q) ||
+             String(r.users?.nik || "").includes(q);
+    }
+    return true;
+  });
 
   const SortTh = ({ k, children }) => {
     const active = sortKey === k;
@@ -260,8 +290,8 @@ export default function Performance() {
                       <span className="w-2 h-2 rounded-full" style={{ background: color }} />
                       <span className="text-[10px] font-black tracking-[0.16em] uppercase" style={{ color }}>{label}</span>
                     </div>
-                    <span className="text-2xl font-black" style={{ color }}>{count}</span>
-                    <span className="text-xs font-bold ml-1.5" style={{ color: p.faint }}>{pct}%</span>
+                    <span className="text-2xl font-black" style={{ color }}><Counter to={count} /></span>
+                    <span className="text-xs font-bold ml-1.5" style={{ color: p.faint }}><Counter to={pct} />%</span>
                   </div>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: bg, border: `1px solid ${border}` }}>
                     <span className="text-xs font-black" style={{ color }}>{pct}%</span>
@@ -272,26 +302,31 @@ export default function Performance() {
           </motion.div>
         )}
 
-        {/* TAB SWITCHER */}
+        {/* TAB SWITCHER — framer-motion spring pill */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4 }}
-          className="flex gap-1 mb-5 p-1 rounded-xl w-fit"
+          className="flex gap-0.5 mb-5 p-1 rounded-xl w-fit relative"
           style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
         >
           {tabs.map(({ key, label, Icon }) => (
             <button
               key={key}
-              onClick={() => setTab(key)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200"
-              style={tab === key
-                ? { background: "#1e2d52", color: "#5b8df8" }
-                : { color: p.muted }
-              }
+              onClick={() => { setTab(key); setPerfNameFilter(""); setStatusFilter(""); }}
+              className="relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold z-10 transition-colors duration-150"
+              style={{ color: tab === key ? "#5b8df8" : p.muted }}
             >
-              <Icon size={14} />
-              {label}
+              {tab === key && (
+                <motion.div
+                  layoutId="perf-tab-pill"
+                  className="absolute inset-0 rounded-lg"
+                  style={{ background: "#1e2d52" }}
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                />
+              )}
+              <Icon size={14} className="relative z-10" />
+              <span className="relative z-10">{label}</span>
             </button>
           ))}
         </motion.div>
@@ -307,7 +342,74 @@ export default function Performance() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-2xl overflow-hidden transition-colors duration-300"
+            >
+            {/* PODIUM — top 3 visual */}
+            {sorted.length >= 3 && (
+              <div className="flex items-end justify-center gap-2 mb-5">
+                {[sorted[1], sorted[0], sorted[2]].map((emp, podIdx) => {
+                  const rank    = podIdx === 0 ? 2 : podIdx === 1 ? 1 : 3;
+                  const color   = RANK_COLORS[rank - 1];
+                  const score   = emp?.combined_score ?? 0;
+                  const avatarSize = rank === 1 ? "w-16 h-16" : "w-11 h-11";
+                  const podHeight = rank === 1 ? 174 : 136;
+                  if (!emp) return <div key={podIdx} style={{ flex: 1 }} />;
+                  return (
+                    <motion.div
+                      key={emp.user_id}
+                      initial={{ opacity: 0, y: rank === 1 ? 28 : 18 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: podIdx * 0.1 + 0.05, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                      className="flex-1 flex flex-col items-center rounded-2xl px-3 pb-4 pt-5 relative overflow-hidden"
+                      style={{
+                        background: `linear-gradient(160deg, ${color}12 0%, ${color}06 100%)`,
+                        border: `1px solid ${color}${rank === 1 ? "35" : "22"}`,
+                        minHeight: podHeight,
+                        boxShadow: rank === 1 ? `0 0 40px ${color}20` : undefined,
+                      }}
+                    >
+                      {/* Ambient glow spot */}
+                      <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 80% 60% at 50% 0%, ${color}14, transparent 70%)` }} />
+
+                      {/* Rank number — large, top */}
+                      <span
+                        className="font-black leading-none mb-3 tabular-nums"
+                        style={{ color, fontSize: rank === 1 ? "2rem" : "1.4rem", textShadow: rank === 1 ? `0 0 24px ${color}60` : undefined }}
+                      >
+                        #{rank}
+                      </span>
+
+                      {/* Avatar */}
+                      <div
+                        className={`relative ${avatarSize} rounded-full overflow-hidden mb-2.5 shrink-0`}
+                        style={{ background: deptColor(emp.departement), boxShadow: `0 0 0 2.5px ${p.cardBg}, 0 0 0 4px ${color}50` }}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center font-black text-white" style={{ fontSize: rank === 1 ? "1.4rem" : "1rem" }}>
+                          {(emp.name || "?")[0].toUpperCase()}
+                        </div>
+                        {emp.link_image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={getDrivePreview(emp.link_image)} alt={emp.name} className="absolute inset-0 w-full h-full object-cover" />
+                        )}
+                      </div>
+
+                      <p className="font-black text-center leading-tight w-full truncate px-1" style={{ color: rank === 1 ? color : p.text, fontSize: rank === 1 ? "0.85rem" : "0.75rem" }}>{emp.name}</p>
+
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md mt-1 mb-auto" style={{ background: `${deptColor(emp.departement)}18`, color: deptColor(emp.departement) }}>
+                        {(emp.departement || "").toUpperCase()}
+                      </span>
+
+                      {/* Score badge */}
+                      <div className="mt-3 flex flex-col items-center">
+                        <span className="font-black tabular-nums" style={{ color, fontSize: rank === 1 ? "1.6rem" : "1.2rem" }}>{score}</span>
+                        <span className="text-[9px] font-bold tracking-widest uppercase" style={{ color: `${color}80` }}>score</span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="rounded-2xl overflow-hidden transition-colors duration-300"
               style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
             >
               <table className="w-full text-sm">
@@ -329,20 +431,34 @@ export default function Performance() {
                   {sorted.length > 0 ? sorted.map((emp, i) => {
                     const rank      = i + 1;
                     const rankColor = rank <= 3 ? RANK_COLORS[rank - 1] : p.faint;
+                    const isChamp   = rank === 1;
                     return (
                       <motion.tr
                         key={emp.user_id}
                         custom={i}
                         variants={rowVariants}
-                        className="transition-colors duration-150"
-                        style={{ borderBottom: `1px solid ${p.border}`, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
-                        onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; }}
+                        className="relative transition-colors duration-150"
+                        style={{
+                          borderBottom: `1px solid ${p.border}`,
+                          background: isChamp
+                            ? "rgba(245,158,11,0.04)"
+                            : i % 2 === 0 ? p.cardBg : p.rowAlt,
+                          boxShadow: isChamp ? "inset 3px 0 0 #f59e0b" : undefined,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = isChamp ? "rgba(245,158,11,0.08)" : p.rowHover; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = isChamp ? "rgba(245,158,11,0.04)" : i % 2 === 0 ? p.cardBg : p.rowAlt; }}
                       >
                         {/* Rank chip */}
                         <td className="px-5 py-4">
                           {rank <= 3 ? (
-                            <span className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black" style={{ background: `${rankColor}18`, color: rankColor }}>
+                            <span
+                              className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black"
+                              style={{
+                                background: `${rankColor}18`,
+                                color: rankColor,
+                                boxShadow: isChamp ? `0 0 12px ${rankColor}44` : undefined,
+                              }}
+                            >
                               {rank}
                             </span>
                           ) : (
@@ -353,7 +469,13 @@ export default function Performance() {
                         {/* Employee avatar + name */}
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0" style={{ background: deptColor(emp.departement) }}>
+                            <div
+                              className="relative w-8 h-8 rounded-full overflow-hidden shrink-0"
+                              style={{
+                                background: deptColor(emp.departement),
+                                boxShadow: isChamp ? `0 0 0 2px #f59e0b, 0 0 10px rgba(245,158,11,0.3)` : undefined,
+                              }}
+                            >
                               <div className="absolute inset-0 flex items-center justify-center text-xs font-black text-white">
                                 {(emp.name || "?")[0].toUpperCase()}
                               </div>
@@ -363,22 +485,40 @@ export default function Performance() {
                               )}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-bold truncate" style={{ color: p.text }}>{emp.name}</p>
+                              <p className="font-bold truncate" style={{ color: isChamp ? "#f59e0b" : p.text }}>{emp.name}</p>
                               <p className="font-mono text-[11px]" style={{ color: p.faint }}>{emp.nik}</p>
                             </div>
                           </div>
                         </td>
 
-                        {/* Dept */}
+                        {/* Dept chip */}
                         <td className="px-5 py-4">
-                          <span className="text-xs font-bold" style={{ color: p.muted }}>{emp.departement?.toUpperCase() || "—"}</span>
+                          {emp.departement ? (
+                            <span
+                              className="text-[10px] font-black px-2 py-0.5 rounded-md"
+                              style={{ background: `${deptColor(emp.departement)}18`, color: deptColor(emp.departement) }}
+                            >
+                              {emp.departement.toUpperCase()}
+                            </span>
+                          ) : <span style={{ color: p.faint }}>—</span>}
                         </td>
 
-                        {/* Attendance % color-coded */}
+                        {/* Attendance % with mini bar */}
                         <td className="px-5 py-4">
-                          <span className="text-sm font-black" style={{ color: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444" }}>
-                            {emp.attendance_rate}%
-                          </span>
+                          <div className="flex flex-col gap-1 min-w-[72px]">
+                            <span className="text-sm font-black tabular-nums" style={{ color: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444" }}>
+                              {emp.attendance_rate}%
+                            </span>
+                            <div className="h-1 rounded-full overflow-hidden" style={{ background: p.border2, minWidth: 64 }}>
+                              <motion.div
+                                className="h-full rounded-full"
+                                style={{ background: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444" }}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${emp.attendance_rate}%` }}
+                                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: i * 0.03 + 0.2 }}
+                              />
+                            </div>
+                          </div>
                         </td>
 
                         {/* Perf badge */}
@@ -406,6 +546,7 @@ export default function Performance() {
                   )}
                 </motion.tbody>
               </table>
+            </div>
             </motion.div>
           )}
 
@@ -417,9 +558,64 @@ export default function Performance() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-2xl overflow-hidden transition-colors duration-300"
-              style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
             >
+              {/* Status filter chips */}
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {[
+                  { key: "", label: "All" },
+                  { key: "best",    label: "Best",    color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
+                  { key: "good",    label: "Good",    color: "#5b8df8", bg: "rgba(91,141,248,0.12)" },
+                  { key: "average", label: "Average", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+                  { key: "worst",   label: "Worst",   color: "#ef4444", bg: "rgba(239,68,68,0.12)"  },
+                ].map(opt => {
+                  const active = statusFilter === opt.key;
+                  const count = opt.key
+                    ? perfRecords.filter(r => (r.status || "").toLowerCase() === opt.key).length
+                    : perfRecords.length;
+                  return (
+                    <motion.button
+                      key={opt.key}
+                      onClick={() => setStatusFilter(opt.key)}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200"
+                      style={{
+                        background: active ? (opt.bg || p.inputBg) : p.inputBg,
+                        color:      active ? (opt.color || p.text) : p.muted,
+                        border:     `1px solid ${active ? (opt.color || p.border) + "55" : p.border}`,
+                        boxShadow:  active && opt.color ? `0 0 0 2px ${opt.color}22` : "none",
+                      }}
+                    >
+                      {opt.key && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />}
+                      {opt.label}
+                      <span className="ml-0.5 tabular-nums text-[10px] opacity-70">{count}</span>
+                    </motion.button>
+                  );
+                })}
+                {/* Name search */}
+                <div className="relative ml-auto">
+                  <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
+                  <input
+                    type="text"
+                    placeholder="Search name / NIK…"
+                    value={perfNameFilter}
+                    onChange={e => setPerfNameFilter(e.target.value)}
+                    className="pl-8 pr-4 py-1.5 rounded-xl text-xs outline-none transition-all w-44"
+                    style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
+                    onFocus={e => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.1)"; }}
+                    onBlur={e =>  { e.target.style.borderColor = p.border2; e.target.style.boxShadow = "none"; }}
+                  />
+                </div>
+                {(statusFilter || perfNameFilter) && (
+                  <span className="text-xs" style={{ color: p.faint }}>
+                    {filteredPerf.length} / {perfRecords.length}
+                  </span>
+                )}
+              </div>
+
+              <div className="rounded-2xl overflow-hidden transition-colors duration-300"
+                style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+              >
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${p.border}` }}>
@@ -440,7 +636,7 @@ export default function Performance() {
                   animate="visible"
                   variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.032 } } }}
                 >
-                  {perfRecords.length > 0 ? perfRecords.map((item, i) => (
+                  {filteredPerf.length > 0 ? filteredPerf.map((item, i) => (
                     <motion.tr
                       key={item.id}
                       custom={i}
@@ -502,6 +698,7 @@ export default function Performance() {
                   )}
                 </motion.tbody>
               </table>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -509,7 +706,7 @@ export default function Performance() {
       </div>
 
       {/* DRAWER */}
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={t("performance.addTitle")}>
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={t("performance.addTitle")} subtitle="Record quarterly performance rating" accentColor="#5b8df8">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <PerformanceForm onSubmit={handleSubmit} />
           <motion.button

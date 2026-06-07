@@ -7,7 +7,7 @@ import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import EmployeeForm from "../components/forms/EmployeeForm";
 import Drawer from "../components/Drawer";
-import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Pencil, Trash2, Users } from "lucide-react";
+import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Pencil, Trash2, Users, LayoutGrid, List, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { toast } from "@/lib/toast";
 import { SkeletonTable } from "../components/SkeletonRow";
@@ -86,6 +86,14 @@ function DeleteButton({ label, confirmLabel, onConfirm }) {
   );
 }
 
+function tenureLabel(dateStr) {
+  if (!dateStr) return null;
+  const ms = Date.now() - new Date(dateStr).getTime();
+  const months = Math.floor(ms / (30.44 * 24 * 60 * 60 * 1000));
+  if (months < 12) return `${months}mo`;
+  return `${Math.floor(months / 12)}yr`;
+}
+
 const rowVariants = {
   hidden:  { opacity: 0, y: 5 },
   visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.032, duration: 0.32, ease: [0.22, 1, 0.36, 1] } }),
@@ -98,6 +106,8 @@ export default function Employee() {
   const page    = Number(searchParams.get("page")    || 1);
   const limit   = Number(searchParams.get("limit")   || 10);
   const keyword = searchParams.get("keyword") || "";
+  const sort    = searchParams.get("sort")    || "name";
+  const order   = searchParams.get("order")   || "asc";
 
   const [resultData,    setResultData]    = useState({ data: [], total: 0, totalPages: 1, currentPage: 1 });
   const [loading,       setLoading]       = useState(true);
@@ -105,6 +115,7 @@ export default function Employee() {
   const [formData,      setFormData]      = useState({});
   const [isEdit,        setIsEdit]        = useState(false);
   const [localKeyword,  setLocalKeyword]  = useState(keyword);
+  const [viewMode,      setViewMode]      = useState("table");
   const debounceRef = useRef(null);
 
   // Live debounced search — fires 320ms after last keystroke
@@ -127,11 +138,11 @@ export default function Employee() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchWithAuth(`${apiBaseUrl}/members?keyword=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}`);
+      const res = await fetchWithAuth(`${apiBaseUrl}/members?keyword=${encodeURIComponent(keyword)}&page=${page}&limit=${limit}&sort=${sort}&order=${order}`);
       setResultData(res);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  }, [keyword, page, limit]);
+  }, [keyword, page, limit, sort, order]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -205,7 +216,29 @@ export default function Employee() {
     .filter(pg => pg === 1 || pg === totalPages || Math.abs(pg - currentPage) <= 1)
     .reduce((acc, pg, idx, arr) => { if (idx > 0 && pg - arr[idx - 1] > 1) acc.push("…"); acc.push(pg); return acc; }, []);
 
-  const COLS = [t("employee.columns.nik"), t("employee.columns.name"), t("employee.columns.position"), t("employee.columns.joinDate"), t("employee.columns.status"), t("employee.columns.workerStatus"), t("employee.columns.action")];
+  const sortCol = (field) => {
+    const newOrder = sort === field && order === "asc" ? "desc" : "asc";
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("sort", field); sp.set("order", newOrder); sp.set("page", "1");
+    router.push(`?${sp.toString()}`);
+  };
+
+  const SortTh = ({ field, children }) => {
+    const active = sort === field;
+    const Icon = active ? (order === "desc" ? ArrowDown : ArrowUp) : ArrowUpDown;
+    return (
+      <th
+        onClick={() => sortCol(field)}
+        className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase cursor-pointer select-none"
+        style={{ color: active ? "#5b8df8" : p.faint }}
+      >
+        <span className="inline-flex items-center gap-1">
+          {children}
+          <Icon size={10} style={{ opacity: active ? 1 : 0.4 }} />
+        </span>
+      </th>
+    );
+  };
 
   return (
     <main className="overflow-x-hidden w-full max-w-full">
@@ -310,8 +343,26 @@ export default function Employee() {
             </span>
           )}
 
-          {/* Department filter chips */}
-          <div className="flex items-center gap-1.5 flex-wrap ml-auto">
+          {/* View toggle + Department filter chips */}
+          <div className="flex items-center gap-3 flex-wrap ml-auto">
+            {/* View toggle */}
+            <div className="flex items-center rounded-xl overflow-hidden" style={{ border: `1px solid ${p.border2}` }}>
+              {[{ mode: "table", Icon: List }, { mode: "grid", Icon: LayoutGrid }].map(({ mode, Icon }) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  className="w-8 h-8 flex items-center justify-center transition-all duration-150"
+                  style={{
+                    background: viewMode === mode ? "#3b6fd4" : p.inputBg,
+                    color:      viewMode === mode ? "#fff"    : p.faint,
+                  }}
+                >
+                  <Icon size={14} />
+                </button>
+              ))}
+            </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
             {Object.entries(DEPT_COLORS).map(([dept, color]) => {
               const active = keyword.toLowerCase() === dept;
               return (
@@ -340,12 +391,132 @@ export default function Employee() {
               );
             })}
           </div>
+          </div>
         </motion.div>
 
-        {/* TABLE */}
+        {/* TABLE / GRID */}
+        <AnimatePresence mode="wait">
+        {viewMode === "grid" ? (
+          /* ---- CARD GRID VIEW ---- */
+          <motion.div
+            key="grid"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                {Array.from({ length: limit }).map((_, i) => (
+                  <div key={i} className="rounded-2xl overflow-hidden skeleton-pulse" style={{ background: p.cardBg, border: `1px solid ${p.border}`, minHeight: 200 }}>
+                    <div className="h-14 w-full" style={{ background: p.border }} />
+                    <div className="flex flex-col items-center px-4 pt-9 pb-5 gap-3">
+                      <div className="w-20 h-3.5 rounded-full" style={{ background: p.border2 }} />
+                      <div className="w-12 h-2.5 rounded-full" style={{ background: p.border2 }} />
+                      <div className="w-16 h-6 rounded-full" style={{ background: p.border2 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : data.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                {data.map((emp, i) => {
+                  const dc = deptColor(emp.departement);
+                  return (
+                    <motion.div
+                      key={emp.id}
+                      initial={{ opacity: 0, scale: 0.94, y: 18 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                      className="group relative rounded-2xl overflow-hidden cursor-default"
+                      style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+                      whileHover={{ scale: 1.018, transition: { duration: 0.2, ease: "easeOut" } }}
+                      whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = `${dc}55`; e.currentTarget.style.boxShadow = `0 8px 32px ${dc}18, 0 0 0 1px ${dc}22`; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = p.border; e.currentTarget.style.boxShadow = "none"; }}
+                    >
+                      {/* Dept-colored header band */}
+                      <div
+                        className="relative h-14 w-full flex items-end justify-center pb-0"
+                        style={{ background: `linear-gradient(135deg, ${dc}28 0%, ${dc}10 100%)` }}
+                      >
+                        <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 100% 160% at 50% 0%, ${dc}18, transparent 80%)` }} />
+                        {/* dept label top-left */}
+                        <span
+                          className="absolute top-2.5 left-3 text-[9px] font-black tracking-[0.22em] uppercase"
+                          style={{ color: dc }}
+                        >
+                          {emp.departement || "—"}
+                        </span>
+                        {/* edit button top-right */}
+                        <button
+                          onClick={() => openEdit(emp)}
+                          className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          style={{ background: `${dc}25`, color: dc }}
+                          onMouseEnter={e => { e.currentTarget.style.background = `${dc}42`; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = `${dc}25`; }}
+                        >
+                          <Pencil size={10} />
+                        </button>
+                        {/* avatar — sits at bottom edge of band, half in body */}
+                        <div
+                          className="relative w-14 h-14 rounded-full overflow-hidden shrink-0 translate-y-7"
+                          style={{ background: dc, boxShadow: `0 0 0 3px ${p.cardBg}, 0 0 0 4.5px ${dc}50` }}
+                        >
+                          <div className="absolute inset-0 flex items-center justify-center text-xl font-black text-white">
+                            {(emp.name || "?")[0].toUpperCase()}
+                          </div>
+                          {emp.link_image && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={getDrivePreview(emp.link_image)} alt={emp.name} className="absolute inset-0 w-full h-full object-cover" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card body */}
+                      <div className="flex flex-col items-center text-center px-4 pt-9 pb-5 gap-2">
+                        <div className="w-full">
+                          <p className="font-black text-sm leading-snug truncate" style={{ color: p.text }}>{emp.name}</p>
+                          <p className="font-mono text-[11px] mt-0.5" style={{ color: p.faint }}>{emp.nik}</p>
+                        </div>
+
+                        {emp.section && (
+                          <p className="text-[11px] truncate w-full" style={{ color: p.muted }}>{emp.section}</p>
+                        )}
+
+                        <div className="flex items-center gap-1.5 flex-wrap justify-center mt-0.5">
+                          <StatusPill value={emp.status} />
+                          {emp.worker_stats && <WorkBadge value={emp.worker_stats} />}
+                        </div>
+
+                        {emp.join_date && (
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-md tabular-nums"
+                            style={{ background: p.inputBg, color: p.faint }}
+                          >
+                            {tenureLabel(emp.join_date)} tenure
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-16">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: p.inputBg }}>
+                  <Users size={22} style={{ color: p.faint }} />
+                </div>
+                <p className="text-sm font-semibold" style={{ color: p.faint }}>{t("employee.noData")}</p>
+              </div>
+            )}
+          </motion.div>
+        ) : (
         <motion.div
+          key="table"
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
           transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="rounded-2xl overflow-hidden transition-colors duration-300"
           style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
@@ -353,11 +524,15 @@ export default function Employee() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: `1px solid ${p.border}` }}>
-                {COLS.map(h => (
-                  <th key={h} className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>
-                    {h}
-                  </th>
-                ))}
+                <SortTh field="nik">{t("employee.columns.nik")}</SortTh>
+                <SortTh field="name">{t("employee.columns.name")}</SortTh>
+                <SortTh field="section">{t("employee.columns.position")}</SortTh>
+                <SortTh field="join_date">{t("employee.columns.joinDate")}</SortTh>
+                <SortTh field="status">{t("employee.columns.status")}</SortTh>
+                <SortTh field="worker_stats">{t("employee.columns.workerStatus")}</SortTh>
+                <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>
+                  {t("employee.columns.action")}
+                </th>
               </tr>
             </thead>
             <motion.tbody
@@ -374,8 +549,8 @@ export default function Employee() {
                   variants={rowVariants}
                   className="group transition-colors duration-150"
                   style={{ borderBottom: `1px solid ${p.border}`, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
-                  onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${deptColor(emp.departement)}80`; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; e.currentTarget.style.boxShadow = "none"; }}
                 >
                   {/* NIK chip */}
                   <td className="px-5 py-4">
@@ -401,9 +576,14 @@ export default function Employee() {
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold leading-snug truncate" style={{ color: p.text }}>{emp.name}</p>
-                        <p className="text-[11px] font-semibold truncate" style={{ color: p.faint }}>
-                          {emp.departement?.toUpperCase() || "—"}
-                        </p>
+                        {emp.departement && (
+                          <span
+                            className="text-[10px] font-black px-1.5 py-0.5 rounded-md"
+                            style={{ background: `${deptColor(emp.departement)}18`, color: deptColor(emp.departement) }}
+                          >
+                            {emp.departement.toUpperCase()}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -413,11 +593,16 @@ export default function Employee() {
                     <span className="text-sm" style={{ color: p.muted }}>{emp.section || "—"}</span>
                   </td>
 
-                  {/* Join date */}
+                  {/* Join date + tenure */}
                   <td className="px-5 py-4">
                     <span className="text-xs font-medium tabular-nums" style={{ color: p.faint }}>
                       {emp.join_date ? new Date(emp.join_date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                     </span>
+                    {emp.join_date && (
+                      <span className="ml-2 text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: p.inputBg, color: p.faint }}>
+                        {tenureLabel(emp.join_date)}
+                      </span>
+                    )}
                   </td>
 
                   {/* Status dot */}
@@ -458,6 +643,8 @@ export default function Employee() {
             </motion.tbody>
           </table>
         </motion.div>
+        )}
+        </AnimatePresence>
 
         {/* PAGINATION */}
         {totalPages > 1 && (
@@ -506,7 +693,13 @@ export default function Employee() {
       </div>
 
       {/* DRAWER */}
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={isEdit ? t("employee.editTitle") : t("employee.createTitle")}>
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={isEdit ? t("employee.editTitle") : t("employee.createTitle")}
+        subtitle={isEdit && formData?.name ? `${formData.name}${formData.departement ? ` · ${formData.departement.toUpperCase()}` : ""}` : undefined}
+        accentColor={isEdit && formData?.departement ? deptColor(formData.departement) : "#3b6fd4"}
+      >
         <form
           id="employee-form"
           onSubmit={isEdit ? (e) => { e.preventDefault(); handleUpdate(); } : handleCreate}

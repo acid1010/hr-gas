@@ -4,7 +4,22 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
-const REFRESH_INTERVAL = 5 * 60 * 1000;
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+function useRefreshCountdown(intervalMs) {
+  const [secs, setSecs] = useState(Math.floor(intervalMs / 1000));
+  useEffect(() => {
+    setSecs(Math.floor(intervalMs / 1000));
+    const id = setInterval(() => {
+      setSecs(s => {
+        if (s <= 1) return Math.floor(intervalMs / 1000);
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return secs;
+}
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -101,18 +116,31 @@ function SpotlightCard({ emp, rank = 1 }) {
 
         {/* Name + dept */}
         <div className="mt-8 mb-6">
-          <div className="relative w-14 h-14 rounded-2xl overflow-hidden mb-4" style={{ background: deptColor(emp.departement) }}>
-            <div className="absolute inset-0 flex items-center justify-center text-2xl font-black text-white">
-              {(emp.name || "?")[0].toUpperCase()}
+          {/* Avatar with animated glow ring */}
+          <div className="relative mb-5" style={{ width: 100, height: 100 }}>
+            {/* Animated ring glow */}
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ boxShadow: `0 0 0 3px ${meta.color}50, 0 0 32px ${meta.color}30` }}
+              animate={{ boxShadow: [`0 0 0 3px ${meta.color}50, 0 0 24px ${meta.color}22`, `0 0 0 5px ${meta.color}80, 0 0 48px ${meta.color}44`, `0 0 0 3px ${meta.color}50, 0 0 24px ${meta.color}22`] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+            />
+            <div
+              className="relative w-full h-full rounded-full overflow-hidden"
+              style={{ background: deptColor(emp.departement), boxShadow: `0 0 0 3px ${color}40` }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center font-black text-white" style={{ fontSize: "2.6rem" }}>
+                {(emp.name || "?")[0].toUpperCase()}
+              </div>
+              {emp.link_image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={getDrivePreview(emp.link_image)}
+                  alt={emp.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              )}
             </div>
-            {emp.link_image && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={getDrivePreview(emp.link_image)}
-                alt={emp.name}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-            )}
           </div>
           <h2 className="font-black text-white leading-tight mb-2" style={{ fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)" }}>
             {emp.name}
@@ -173,10 +201,11 @@ function RankRow({ emp, rank, index }) {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.045, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-200"
+      className="relative flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-2xl transition-all duration-200 overflow-hidden"
       style={{
         background: meta ? `${meta.color}08` : "rgba(255,255,255,0.02)",
         border: `1px solid ${meta ? `${meta.color}18` : "rgba(255,255,255,0.05)"}`,
+        boxShadow: meta && rank === 1 ? `inset 4px 0 0 ${meta.color}` : meta ? `inset 3px 0 0 ${meta.color}50` : undefined,
       }}
     >
       {/* Rank */}
@@ -227,6 +256,7 @@ function RankRow({ emp, rank, index }) {
 /* ---------- main display ---------- */
 export default function Display() {
   const { time, date } = useClock();
+  const refreshIn = useRefreshCountdown(REFRESH_INTERVAL);
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const [month, setMonth] = useState(defaultMonth);
@@ -284,12 +314,24 @@ export default function Display() {
           <span className="font-black" style={{ color: "rgba(255,255,255,0.35)", fontSize: "3.2rem" }}>{time.s}</span>
         </div>
 
-        {/* Month + date */}
-        <div className="text-right">
-          <span className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest block mb-1.5" style={{ background: "rgba(91,141,248,0.12)", color: "#5b8df8" }}>
+        {/* Month + date + refresh countdown */}
+        <div className="text-right flex flex-col items-end gap-1.5">
+          <span className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest" style={{ background: "rgba(91,141,248,0.12)", color: "#5b8df8" }}>
             {monthLabel}
           </span>
           <p className="text-[11px] capitalize font-semibold" style={{ color: "#4a5568" }}>{date}</p>
+          <div className="flex items-center gap-1.5">
+            <div className="relative w-16 h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <motion.div
+                className="absolute left-0 top-0 h-full rounded-full"
+                style={{ background: "#5b8df8", width: `${(refreshIn / (REFRESH_INTERVAL / 1000)) * 100}%` }}
+                transition={{ duration: 0.9, ease: "linear" }}
+              />
+            </div>
+            <span className="text-[10px] font-mono font-bold tabular-nums" style={{ color: "#4a5568" }}>
+              {Math.floor(refreshIn / 60)}:{String(refreshIn % 60).padStart(2, "0")}
+            </span>
+          </div>
         </div>
       </div>
 

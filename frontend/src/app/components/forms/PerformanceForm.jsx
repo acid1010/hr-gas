@@ -196,10 +196,11 @@ function EmployeePicker({ employees, selected, onSelect, p }) {
 /* ---- Main form ---- */
 const PerformanceForm = ({ onSubmit }) => {
   const { p } = useAppSettings();
+  const currentQuarter = String(Math.ceil((new Date().getMonth() + 1) / 3));
   const [employees, setEmployees] = useState([]);
   const [selected,  setSelected]  = useState(null);
   const [status,    setStatus]    = useState("");
-  const [quarter,   setQuarter]   = useState("");
+  const [quarter,   setQuarter]   = useState(currentQuarter);
 
   useEffect(() => {
     fetchWithAuth(`${apiBaseUrl}/members?limit=10000`)

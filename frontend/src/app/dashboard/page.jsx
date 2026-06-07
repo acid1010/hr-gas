@@ -2,11 +2,31 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useAppSettings } from "@/lib/useAppSettings";
-import { Users, CalendarCheck, CalendarX, TrendingUp, ArrowUpRight } from "lucide-react";
+import { Users, CalendarCheck, CalendarX, TrendingUp, ArrowUpRight, Medal } from "lucide-react";
+
+// Circular SVG progress ring
+function ProgressRing({ value, accent, size = 52, stroke = 4 }) {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(Math.max((value || 0) / 100, 0), 1);
+  return (
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`${accent}18`} strokeWidth={stroke} />
+      <motion.circle
+        cx={size / 2} cy={size / 2} r={r} fill="none" stroke={accent} strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        initial={{ strokeDashoffset: circ }}
+        animate={{ strokeDashoffset: circ * (1 - pct) }}
+        transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
+      />
+    </svg>
+  );
+}
 
 // Ease-out-expo animated counter
 function Counter({ to, duration = 1.4 }) {
@@ -30,10 +50,11 @@ function Counter({ to, duration = 1.4 }) {
 
 function CustomTooltip({ active, payload, label, bg, text }) {
   if (!active || !payload?.length) return null;
+  const count = payload[0].value;
   return (
-    <div style={{ background: bg, border: "1px solid rgba(91,141,248,0.3)", borderRadius: 10, padding: "8px 14px", color: text, fontSize: 12, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
-      <div style={{ color: "#5b8df8", marginBottom: 2 }}>{label}:00</div>
-      <div>{payload[0].value} punches</div>
+    <div style={{ background: bg, border: "1px solid rgba(91,141,248,0.28)", borderRadius: 12, padding: "10px 16px", color: text, fontSize: 12, fontWeight: 700, boxShadow: "0 12px 40px rgba(0,0,0,0.3)" }}>
+      <div style={{ color: "#5b8df8", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}:00 – {label}:59</div>
+      <div style={{ fontSize: 20, fontWeight: 900, color: count > 0 ? text : "#4a5568" }}>{count} <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7a99" }}>punches</span></div>
     </div>
   );
 }
@@ -79,15 +100,20 @@ export default function Dashboard() {
   const [kpi, setKpi] = useState({ totalEmployees: 0, presentToday: 0, absentToday: 0, avgPerf: 0 });
   const [hourlyData, setHourlyData] = useState([]);
   const [absentList, setAbsentList] = useState([]);
+  const [deptStats, setDeptStats] = useState([]);
+  const [workerStats, setWorkerStats] = useState([]);
+  const [topPerformer, setTopPerformer] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const todayStr = new Date().toISOString().slice(0, 10);
-      const [membersRes, attendanceRes, perfRes] = await Promise.all([
+      const monthStr = todayStr.slice(0, 7);
+      const [membersRes, attendanceRes, perfRes, leaderboardRes] = await Promise.all([
         fetchWithAuth(`${apiBaseUrl}/members?limit=500`),
         fetchWithAuth(`${apiBaseUrl}/api/attendance?date=${todayStr}&limit=500`),
         fetchWithAuth(`${apiBaseUrl}/api/performance`),
+        fetchWithAuth(`${apiBaseUrl}/api/performance/leaderboard?month=${monthStr}`),
       ]);
 
       const totalEmployees = membersRes?.total || 0;
@@ -108,11 +134,41 @@ export default function Dashboard() {
       const scores = (perfRes?.data || []).map(d => ratingMap[d.status?.toLowerCase()] ?? 0).filter(Boolean);
       const avgPerf = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
-      const absent = (membersRes?.data || []).filter(emp => !presentSet.has(emp.id));
+      const allMembers = membersRes?.data || [];
+      const absent = allMembers.filter(emp => !presentSet.has(emp.id));
+
+      // Dept-level attendance breakdown
+      const deptMap = {};
+      for (const emp of allMembers) {
+        const d = (emp.departement || "unknown").toLowerCase();
+        if (!deptMap[d]) deptMap[d] = { total: 0, present: 0 };
+        deptMap[d].total++;
+        if (presentSet.has(emp.id)) deptMap[d].present++;
+      }
+      const deptStats = Object.entries(deptMap)
+        .map(([dept, { total, present }]) => ({ dept, total, present, absent: total - present, rate: Math.round((present / total) * 100) }))
+        .sort((a, b) => b.rate - a.rate);
+
+      // Worker-type breakdown
+      const workerMap = { pkwt: 0, borongan: 0, magang: 0, other: 0 };
+      for (const emp of allMembers) {
+        const wt = (emp.worker_stats || "").toLowerCase();
+        if (wt === "pkwt" || wt === "borongan" || wt === "magang") workerMap[wt]++;
+        else workerMap.other++;
+      }
+      const workerStats = Object.entries(workerMap)
+        .map(([type, count]) => ({ type, count, pct: allMembers.length ? Math.round((count / allMembers.length) * 100) : 0 }))
+        .filter(w => w.count > 0);
+
+      const leaderboard = leaderboardRes?.data || [];
+      const top = leaderboard.length > 0 ? leaderboard[0] : null;
 
       setKpi({ totalEmployees, presentToday, absentToday, avgPerf });
       setHourlyData(hourlyData);
       setAbsentList(absent);
+      setDeptStats(deptStats);
+      setWorkerStats(workerStats);
+      setTopPerformer(top);
       setLoaded(true);
     } catch (err) { console.error(err); }
   }, []);
@@ -200,11 +256,20 @@ export default function Dashboard() {
               {/* Ambient glow */}
               <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full pointer-events-none" style={{ background: accent, opacity: 0.07, filter: "blur(24px)" }} />
 
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-4">
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${accent}18` }}>
                   <Icon size={18} style={{ color: accent }} />
                 </div>
-                <ArrowUpRight size={13} style={{ color: p.faint }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                {bar !== null ? (
+                  <div className="relative" style={{ width: 52, height: 52 }}>
+                    {loaded && <ProgressRing value={bar} accent={accent} />}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-[11px] font-black tabular-nums" style={{ color: accent }}>{bar}%</span>
+                    </div>
+                  </div>
+                ) : (
+                  <ArrowUpRight size={13} style={{ color: p.faint }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                )}
               </div>
 
               <div>
@@ -214,18 +279,7 @@ export default function Dashboard() {
                   </span>
                   {sub && <span className="text-base font-bold pb-1" style={{ color: p.muted }}>{sub}</span>}
                 </div>
-                <p className="text-[10px] font-bold tracking-[0.18em] uppercase mb-3" style={{ color: p.faint }}>{label}</p>
-                {bar !== null && (
-                  <div className="h-1 rounded-full overflow-hidden" style={{ background: `${accent}18` }}>
-                    <motion.div
-                      className="h-full rounded-full"
-                      style={{ background: accent }}
-                      initial={{ width: 0 }}
-                      animate={loaded ? { width: `${Math.min(bar, 100)}%` } : { width: 0 }}
-                      transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.09 + 0.4 }}
-                    />
-                  </div>
-                )}
+                <p className="text-[10px] font-bold tracking-[0.18em] uppercase" style={{ color: p.faint }}>{label}</p>
               </div>
             </motion.div>
           ))}
@@ -255,7 +309,7 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* MAIN GRID — 12 cols: chart(7) + list(5) */}
+        {/* MAIN GRID — 12 cols: chart(7) + spotlight(2) + absent(3) */}
         <div className="grid grid-cols-12 gap-4">
 
           {/* Area Chart — 7 / 12 */}
@@ -298,6 +352,7 @@ export default function Dashboard() {
                     allowDecimals={false}
                   />
                   <Tooltip content={<CustomTooltip bg={p.cardBg} text={p.text} />} />
+                  <ReferenceLine x={String(new Date().getHours()).padStart(2, "0")} stroke="#5b8df8" strokeDasharray="3 3" strokeOpacity={0.4} label={{ value: "Now", position: "top", fill: "#5b8df8", fontSize: 9, fontWeight: 700 }} />
                   <Area
                     type="monotone"
                     dataKey="punches"
@@ -312,12 +367,88 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Absent list — 5 / 12 */}
+          {/* Performance Spotlight — 2 / 12 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 20 }}
+            transition={{ delay: 0.46, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="col-span-12 xl:col-span-2 rounded-2xl flex flex-col overflow-hidden transition-colors duration-300"
+            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+          >
+            <div className="px-4 py-3 flex items-center gap-2 shrink-0" style={{ borderBottom: `1px solid ${p.border}` }}>
+              <Medal size={12} style={{ color: "#f59e0b" }} />
+              <p className="text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>Top Performer</p>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center justify-center p-4 gap-3">
+              {topPerformer ? (
+                <>
+                  {/* Pulsing glow avatar */}
+                  <div className="relative" style={{ width: 72, height: 72 }}>
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      animate={{ boxShadow: [
+                        "0 0 0 2px #f59e0b44, 0 0 20px #f59e0b18",
+                        "0 0 0 5px #f59e0b66, 0 0 40px #f59e0b30",
+                        "0 0 0 2px #f59e0b44, 0 0 20px #f59e0b18",
+                      ]}}
+                      transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <div
+                      className="relative w-full h-full rounded-full overflow-hidden"
+                      style={{ background: deptColor(topPerformer.departement) }}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center font-black text-white text-xl">
+                        {(topPerformer.name || "?")[0].toUpperCase()}
+                      </div>
+                      {topPerformer.link_image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={getDrivePreview(topPerformer.link_image)} alt={topPerformer.name} className="absolute inset-0 w-full h-full object-cover" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* #1 badge */}
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.15)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.3)" }}>
+                    #1 This Month
+                  </span>
+
+                  {/* Name + dept */}
+                  <div className="text-center min-w-0 w-full">
+                    <p className="font-black text-sm leading-snug truncate" style={{ color: p.text }}>{topPerformer.name}</p>
+                    {topPerformer.departement && (
+                      <span className="text-[10px] font-black uppercase" style={{ color: deptColor(topPerformer.departement) }}>
+                        {topPerformer.departement}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Score ring */}
+                  <div className="relative" style={{ width: 64, height: 64 }}>
+                    <ProgressRing value={topPerformer.combined_score} accent="#f59e0b" size={64} stroke={5} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-base font-black tabular-nums leading-none" style={{ color: "#f59e0b" }}>{topPerformer.combined_score}</span>
+                      <span className="text-[9px] font-bold" style={{ color: p.faint }}>score</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-6">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(245,158,11,0.08)" }}>
+                    <Medal size={20} style={{ color: "#f59e0b", opacity: 0.4 }} />
+                  </div>
+                  <p className="text-xs text-center" style={{ color: p.faint }}>No data this month</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Absent list — 3 / 12 */}
           <motion.div
             initial={{ opacity: 0, x: 18 }}
             animate={{ opacity: loaded ? 1 : 0, x: loaded ? 0 : 18 }}
             transition={{ delay: 0.5, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="col-span-12 xl:col-span-5 rounded-2xl flex flex-col overflow-hidden transition-colors duration-300"
+            className="col-span-12 xl:col-span-3 rounded-2xl flex flex-col overflow-hidden transition-colors duration-300"
             style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
           >
             <div className="px-5 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: `1px solid ${p.border}` }}>
@@ -367,9 +498,14 @@ export default function Dashboard() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold truncate" style={{ color: p.text }}>{emp.name}</p>
-                        <p className="text-[11px] truncate" style={{ color: p.faint }}>
-                          {emp.nik} · {emp.departement?.toUpperCase() || "—"}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-mono" style={{ color: p.faint }}>{emp.nik}</span>
+                          {emp.departement && (
+                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ background: `${deptColor(emp.departement)}18`, color: deptColor(emp.departement) }}>
+                              {emp.departement.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#ef4444", boxShadow: "0 0 4px #ef4444" }} />
                     </motion.div>
@@ -380,6 +516,117 @@ export default function Dashboard() {
           </motion.div>
 
         </div>
+
+        {/* DEPT ATTENDANCE BREAKDOWN */}
+        {deptStats.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 18 }}
+            transition={{ delay: 0.6, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-4 rounded-2xl overflow-hidden transition-colors duration-300"
+            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+          >
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
+              <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
+                {t("dashboard.deptBreakdown") || "Department Attendance"}
+              </p>
+              <span className="text-[10px] font-bold" style={{ color: p.faint }}>Today</span>
+            </div>
+            <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {deptStats.map(({ dept, total, present, absent: absCnt, rate }, i) => {
+                const color = deptColor(dept);
+                const barColor = rate >= 80 ? "#22c55e" : rate >= 60 ? "#f59e0b" : "#ef4444";
+                return (
+                  <motion.div
+                    key={dept}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.045, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex flex-col gap-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+                        <span className="text-xs font-black uppercase tracking-wider" style={{ color }}>{dept}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black tabular-nums" style={{ color: barColor }}>{rate}%</span>
+                        <span className="text-[10px] tabular-nums" style={{ color: p.faint }}>{present}/{total}</span>
+                      </div>
+                    </div>
+                    {/* Bar */}
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: p.border2 }}>
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ background: barColor }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${rate}%` }}
+                        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: i * 0.045 + 0.3 }}
+                      />
+                    </div>
+                    {absCnt > 0 && (
+                      <p className="text-[10px]" style={{ color: "#ef444490" }}>{absCnt} absent</p>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* WORKER TYPE DISTRIBUTION */}
+        {workerStats.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 18 }}
+            transition={{ delay: 0.7, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-4 rounded-2xl overflow-hidden transition-colors duration-300"
+            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+          >
+            <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
+              <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
+                Workforce Composition
+              </p>
+              <span className="text-[10px] font-bold" style={{ color: p.faint }}>{kpi.totalEmployees} total</span>
+            </div>
+            <div className="px-6 py-5 flex flex-col gap-4">
+              {/* Stacked bar */}
+              <div className="flex h-5 rounded-full overflow-hidden gap-px">
+                {workerStats.map(({ type, pct }, i) => {
+                  const colors = { pkwt: "#5b8df8", borongan: "#f59e0b", magang: "#6b7a99", other: "#4a5568" };
+                  return (
+                    <motion.div
+                      key={type}
+                      className="h-full first:rounded-l-full last:rounded-r-full"
+                      style={{ background: colors[type] || "#4a5568" }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: i * 0.08 + 0.35 }}
+                      title={`${type.toUpperCase()}: ${pct}%`}
+                    />
+                  );
+                })}
+              </div>
+              {/* Legend */}
+              <div className="flex items-center gap-5 flex-wrap">
+                {workerStats.map(({ type, count, pct }) => {
+                  const colors = { pkwt: "#5b8df8", borongan: "#f59e0b", magang: "#6b7a99", other: "#4a5568" };
+                  const color = colors[type] || "#4a5568";
+                  return (
+                    <div key={type} className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: color }} />
+                      <div>
+                        <span className="text-xs font-black uppercase tracking-wide" style={{ color }}>{type}</span>
+                        <span className="text-xs font-bold ml-1.5 tabular-nums" style={{ color: p.faint }}>{count} <span style={{ color: p.faint }}>({pct}%)</span></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
       </div>
 
       <style>{`

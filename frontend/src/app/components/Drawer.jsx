@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 
-export default function Drawer({ open, onClose, title, children }) {
+export default function Drawer({ open, onClose, title, subtitle, accentColor, children }) {
   const { p } = useAppSettings();
+  const accent = accentColor || "#3b6fd4";
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
@@ -28,7 +29,7 @@ export default function Drawer({ open, onClose, title, children }) {
             onClick={onClose}
           />
 
-          {/* Panel — spring slide from right */}
+          {/* Panel */}
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -37,15 +38,23 @@ export default function Drawer({ open, onClose, title, children }) {
             className="relative flex flex-col w-[480px] h-full overflow-y-auto z-10"
             style={{ background: p.cardBg, borderLeft: `1px solid ${p.border}` }}
           >
+            {/* Accent top bar */}
+            <div className="h-1 w-full shrink-0" style={{ background: `linear-gradient(90deg, ${accent}, ${accent}88)` }} />
+
             {/* Header */}
             <div
-              className="flex items-center justify-between px-6 py-4 shrink-0"
+              className="relative flex items-center justify-between px-6 py-4 shrink-0"
               style={{ borderBottom: `1px solid ${p.border}` }}
             >
-              <h2 className="text-base font-black tracking-tight" style={{ color: p.text }}>{title}</h2>
+              {/* Subtle ambient glow behind title */}
+              <div className="absolute left-0 top-0 bottom-0 w-24 pointer-events-none" style={{ background: `linear-gradient(90deg, ${accent}08, transparent)` }} />
+              <div className="relative">
+                <h2 className="text-base font-black tracking-tight" style={{ color: p.text }}>{title}</h2>
+                {subtitle && <p className="text-[11px] font-medium mt-0.5" style={{ color: p.faint }}>{subtitle}</p>}
+              </div>
               <motion.button
                 onClick={onClose}
-                className="p-1.5 rounded-lg transition-colors duration-150"
+                className="p-1.5 rounded-lg transition-colors duration-150 shrink-0"
                 style={{ color: p.faint }}
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.93 }}
@@ -57,7 +66,7 @@ export default function Drawer({ open, onClose, title, children }) {
               </motion.button>
             </div>
 
-            {/* Content — staggered entrance */}
+            {/* Content */}
             <motion.div
               className="flex-1 px-6 py-5"
               initial={{ opacity: 0, y: 10 }}

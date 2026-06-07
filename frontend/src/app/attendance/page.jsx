@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet, Activity, Users, Clock } from "lucide-react";
@@ -11,6 +11,25 @@ import { toast } from "@/lib/toast";
 import { SkeletonTable } from "@/app/components/SkeletonRow";
 
 const fmt = (ts, opts) => new Date(ts).toLocaleString("id-ID", opts);
+
+function Counter({ to, duration = 1.2 }) {
+  const ref = useRef(null);
+  const prev = useRef(0);
+  useEffect(() => {
+    const from = prev.current;
+    const t0 = performance.now();
+    const ms = duration * 1000;
+    const tick = (now) => {
+      const p = Math.min((now - t0) / ms, 1);
+      const ease = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+      if (ref.current) ref.current.textContent = Math.round(from + (to - from) * ease).toLocaleString();
+      if (p < 1) requestAnimationFrame(tick);
+      else prev.current = to;
+    };
+    requestAnimationFrame(tick);
+  }, [to, duration]);
+  return <span ref={ref}>0</span>;
+}
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -33,10 +52,11 @@ const rowVariants = {
 
 function ChartTooltip({ active, payload, label, bg, text }) {
   if (!active || !payload?.length) return null;
+  const count = payload[0].value;
   return (
-    <div style={{ background: bg, border: "1px solid rgba(91,141,248,0.3)", borderRadius: 10, padding: "8px 14px", color: text, fontSize: 12, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,0.25)" }}>
-      <div style={{ color: "#5b8df8", marginBottom: 2 }}>{label}:00</div>
-      <div>{payload[0].value} punches</div>
+    <div style={{ background: bg, border: "1px solid rgba(91,141,248,0.28)", borderRadius: 12, padding: "10px 16px", color: text, fontSize: 12, fontWeight: 700, boxShadow: "0 12px 40px rgba(0,0,0,0.3)" }}>
+      <div style={{ color: "#5b8df8", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}:00 – {label}:59</div>
+      <div style={{ fontSize: 20, fontWeight: 900, color: count > 0 ? text : "#4a5568" }}>{count} <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7a99" }}>punches</span></div>
     </div>
   );
 }
@@ -54,7 +74,9 @@ export default function Attendance() {
   const [deviceStatus,setDeviceStatus]= useState(null);
     const [loading,     setLoading]     = useState(false);
   const [lastSynced,  setLastSynced]  = useState(null);
-  const [nameFilter,  setNameFilter]  = useState("");
+  const [nameFilter,      setNameFilter]      = useState("");
+  const [punchTypeFilter, setPunchTypeFilter] = useState(null);
+  const [deptFilter,      setDeptFilter]      = useState("");
   const autoSyncRef = useRef(null);
 
   const punchLabel = (type) => {
@@ -107,14 +129,19 @@ export default function Attendance() {
     return () => clearInterval(autoSyncRef.current);
   }, []);
 
-  const filteredRecords = nameFilter.trim()
-    ? records.filter(r => {
-        const q = nameFilter.toLowerCase();
-        return (r.users?.name || "").toLowerCase().includes(q) ||
-               String(r.users?.nik || r.device_uid || "").includes(q) ||
-               (r.users?.departement || "").toLowerCase().includes(q);
-      })
-    : records;
+  const filteredRecords = records.filter(r => {
+    if (punchTypeFilter !== null && r.punch_type !== punchTypeFilter) return false;
+    if (deptFilter && (r.users?.departement || "").toLowerCase() !== deptFilter) return false;
+    if (nameFilter.trim()) {
+      const q = nameFilter.toLowerCase();
+      return (r.users?.name || "").toLowerCase().includes(q) ||
+             String(r.users?.nik || r.device_uid || "").includes(q);
+    }
+    return true;
+  });
+
+  // Departments present in current records page (for filter chips)
+  const activeDepts = [...new Set(records.filter(r => r.users?.departement).map(r => r.users.departement.toLowerCase()))].sort();
 
   const presentSet  = new Set(records.filter(r => r.user_id).map(r => r.user_id));
   const times       = records.map(r => new Date(r.punch_time).getTime());
@@ -216,7 +243,7 @@ export default function Attendance() {
               </div>
               <div className="min-w-0">
                 <p className={`font-black leading-none truncate ${isText ? "text-xl" : "text-2xl"}`} style={{ color: accent }}>
-                  {value}
+                  {isText ? value : <Counter to={typeof value === "number" ? value : 0} />}
                 </p>
                 <p className="text-[10px] font-bold tracking-[0.15em] uppercase mt-1 truncate" style={{ color: p.faint }}>
                   {label}
@@ -242,12 +269,36 @@ export default function Attendance() {
             </div>
           </div>
           <div className="px-6 py-5">
-            <ResponsiveContainer width="100%" height={120}>
-              <BarChart data={hourlyData} margin={{ top: 2, right: 0, bottom: 0, left: -28 }}>
+            <ResponsiveContainer width="100%" height={148}>
+              <BarChart data={hourlyData} margin={{ top: 4, right: 0, bottom: 0, left: -28 }}>
+                <defs>
+                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#5b8df8" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#3b6fd4" stopOpacity={0.65} />
+                  </linearGradient>
+                  <linearGradient id="barGradPeak" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#7ba5fa" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#5b8df8" stopOpacity={0.8} />
+                  </linearGradient>
+                </defs>
                 <XAxis dataKey="hour" tick={{ fill: p.faint, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}h`} />
                 <YAxis tick={{ fill: p.faint, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip bg={p.cardBg} text={p.text} />} />
-                <Bar dataKey="punches" fill="#5b8df8" radius={[4, 4, 0, 0]} />
+                <Tooltip content={<ChartTooltip bg={p.cardBg} text={p.text} />} cursor={{ fill: "rgba(91,141,248,0.07)", radius: 6 }} />
+                <ReferenceLine x={String(new Date().getHours()).padStart(2, "0")} stroke="#5b8df8" strokeDasharray="3 3" strokeOpacity={0.45} />
+                <Bar dataKey="punches" radius={[5, 5, 0, 0]} maxBarSize={28}>
+                  {hourlyData.map((entry, i) => {
+                    const currentHour = String(new Date().getHours()).padStart(2, "0");
+                    const isPeak = entry.punches === Math.max(...hourlyData.map(d => d.punches)) && entry.punches > 0;
+                    const isCurrent = entry.hour === currentHour;
+                    return (
+                      <Cell
+                        key={`cell-${i}`}
+                        fill={isCurrent ? "#5b8df8" : isPeak ? "url(#barGradPeak)" : "url(#barGrad)"}
+                        fillOpacity={isCurrent ? 1 : isPeak ? 0.95 : 0.75}
+                      />
+                    );
+                  })}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -294,7 +345,33 @@ export default function Attendance() {
               <FileSpreadsheet size={14} /> {t("attendance.monthlyReport")}
             </button>
           </div>
-          <div className="flex items-center gap-2 mt-2 w-full xl:mt-0 xl:w-auto xl:ml-auto">
+          <div className="flex items-center gap-2 mt-2 w-full xl:mt-0 xl:w-auto xl:ml-auto flex-wrap">
+            {/* Punch type chips */}
+            {[
+              { key: null,  label: "All",       color: p.muted,   bg: p.inputBg },
+              { key: 0,     label: t("attendance.checkIn")  || "Check-in",  color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
+              { key: 1,     label: t("attendance.checkOut") || "Check-out", color: "#5b8df8", bg: "rgba(91,141,248,0.12)" },
+            ].map(opt => {
+              const active = punchTypeFilter === opt.key;
+              return (
+                <motion.button
+                  key={String(opt.key)}
+                  onClick={() => setPunchTypeFilter(opt.key)}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200"
+                  style={{
+                    background: active ? opt.bg : p.inputBg,
+                    color:      active ? opt.color : p.faint,
+                    border:     `1px solid ${active && opt.key !== null ? opt.color + "55" : p.border}`,
+                  }}
+                >
+                  {opt.key !== null && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />}
+                  {opt.label}
+                </motion.button>
+              );
+            })}
+
             <div className="relative">
               <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
               <input
@@ -302,7 +379,7 @@ export default function Attendance() {
                 placeholder={t("attendance.filterName") || "Filter by name / NIK…"}
                 value={nameFilter}
                 onChange={e => setNameFilter(e.target.value)}
-                className="pl-8 pr-4 py-2 rounded-xl text-sm outline-none transition-all w-52"
+                className="pl-8 pr-4 py-2 rounded-xl text-sm outline-none transition-all w-48"
                 style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.text }}
                 onFocus={e => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.1)"; }}
                 onBlur={e =>  { e.target.style.borderColor = p.border2;  e.target.style.boxShadow = "none"; }}
@@ -315,6 +392,34 @@ export default function Attendance() {
             </span>
           </div>
         </motion.div>
+
+        {/* DEPT FILTER CHIPS */}
+        {activeDepts.length > 1 && (
+          <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+            <span className="text-[10px] font-black tracking-[0.15em] uppercase mr-1" style={{ color: p.faint }}>Dept</span>
+            {[{ key: "", label: "All" }, ...activeDepts.map(d => ({ key: d, label: d.toUpperCase() }))].map(opt => {
+              const active = deptFilter === opt.key;
+              const color  = opt.key ? deptColor(opt.key) : p.muted;
+              return (
+                <motion.button
+                  key={opt.key}
+                  onClick={() => setDeptFilter(opt.key)}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black transition-all duration-200"
+                  style={{
+                    background: active ? `${color}22` : p.inputBg,
+                    color:      active ? color : p.faint,
+                    border:     `1px solid ${active && opt.key ? color + "55" : p.border}`,
+                  }}
+                >
+                  {opt.key && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />}
+                  {opt.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
 
         {/* TABLE */}
         <motion.div
@@ -378,7 +483,12 @@ export default function Attendance() {
                             {rec.users?.name || t("attendance.unregistered")}
                           </span>
                           {rec.users?.departement && (
-                            <span className="text-[11px] font-bold" style={{ color: p.faint }}>{rec.users.departement.toUpperCase()}</span>
+                            <span
+                              className="text-[10px] font-black px-1.5 py-0.5 rounded-md"
+                              style={{ background: `${deptColor(rec.users.departement)}18`, color: deptColor(rec.users.departement) }}
+                            >
+                              {rec.users.departement.toUpperCase()}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -421,19 +531,71 @@ export default function Attendance() {
         {/* PAGINATION */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-1.5 mt-5">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
-              <button
-                key={pg}
-                onClick={() => fetchRecords(pg)}
-                className="w-8 h-8 rounded-lg text-xs font-bold transition-all"
-                style={pg === currentPage
-                  ? { background: "#3b6fd4", color: "#fff" }
-                  : { background: p.inputBg, color: p.faint, border: `1px solid ${p.border2}` }
-                }
-              >
-                {pg}
-              </button>
-            ))}
+            {/* Prev */}
+            <button
+              onClick={() => fetchRecords(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-xs transition-all"
+              style={{
+                background: p.inputBg,
+                border: `1px solid ${p.border2}`,
+                color: currentPage === 1 ? p.faint : p.muted,
+                opacity: currentPage === 1 ? 0.35 : 1,
+                cursor: currentPage === 1 ? "not-allowed" : "pointer",
+              }}
+              onMouseEnter={e => { if (currentPage !== 1) e.currentTarget.style.borderColor = "rgba(91,141,248,0.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; }}
+            >
+              ‹
+            </button>
+
+            {/* Smart pages with ellipsis */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(pg => pg === 1 || pg === totalPages || Math.abs(pg - currentPage) <= 1)
+              .reduce((acc, pg, idx, arr) => {
+                if (idx > 0 && pg - arr[idx - 1] > 1) acc.push("…");
+                acc.push(pg);
+                return acc;
+              }, [])
+              .map((pg, idx) =>
+                pg === "…" ? (
+                  <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs" style={{ color: p.faint }}>…</span>
+                ) : (
+                  <motion.button
+                    key={pg}
+                    onClick={() => fetchRecords(pg)}
+                    className="relative w-8 h-8 rounded-xl text-xs font-bold transition-colors"
+                    style={{
+                      background: pg === currentPage ? "#3b6fd4" : p.inputBg,
+                      color:      pg === currentPage ? "#fff"    : p.faint,
+                      border:     `1px solid ${pg === currentPage ? "#3b6fd4" : p.border2}`,
+                    }}
+                    whileHover={pg !== currentPage ? { scale: 1.08 } : {}}
+                    whileTap={pg !== currentPage ? { scale: 0.93 } : {}}
+                    transition={{ duration: 0.12 }}
+                  >
+                    {pg}
+                  </motion.button>
+                )
+              )}
+
+            {/* Next */}
+            <button
+              onClick={() => fetchRecords(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-xs transition-all"
+              style={{
+                background: p.inputBg,
+                border: `1px solid ${p.border2}`,
+                color: currentPage === totalPages ? p.faint : p.muted,
+                opacity: currentPage === totalPages ? 0.35 : 1,
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+              }}
+              onMouseEnter={e => { if (currentPage !== totalPages) e.currentTarget.style.borderColor = "rgba(91,141,248,0.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; }}
+            >
+              ›
+            </button>
           </div>
         )}
       </div>

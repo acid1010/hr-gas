@@ -13,11 +13,11 @@ export default function Sidebar({ user }) {
   const { lang, toggleLang }    = useLang();
 
   const navItems = [
-    { href: "/dashboard",          label: t(lang, "nav.dashboard"),   icon: LayoutDashboard },
-    { href: "/employee",           label: t(lang, "nav.employee"),    icon: Users, exact: true },
-    { href: "/attendance",         label: t(lang, "nav.attendance"),  icon: Fingerprint },
-    { href: "/employee/performance", label: t(lang, "nav.performance"), icon: TrendingUp },
-    { href: "/overtime",           label: t(lang, "nav.overtime"),    icon: Clock },
+    { href: "/dashboard",            label: t(lang, "nav.dashboard"),   icon: LayoutDashboard, shortcut: "⌘1" },
+    { href: "/employee",             label: t(lang, "nav.employee"),    icon: Users, exact: true, shortcut: "⌘2" },
+    { href: "/attendance",           label: t(lang, "nav.attendance"),  icon: Fingerprint, shortcut: "⌘3" },
+    { href: "/employee/performance", label: t(lang, "nav.performance"), icon: TrendingUp, shortcut: "⌘4" },
+    { href: "/overtime",             label: t(lang, "nav.overtime"),    icon: Clock, shortcut: "⌘5", badge: "Soon" },
   ];
 
   const isActive = (href, exact) => {
@@ -93,7 +93,7 @@ export default function Sidebar({ user }) {
       {/* Nav */}
       <nav className="flex-1 p-3 overflow-y-auto">
         <div className="flex flex-col gap-0.5">
-          {navItems.map(({ href, label, icon: Icon, exact }, i) => {
+          {navItems.map(({ href, label, icon: Icon, exact, shortcut, badge }, i) => {
             const active = isActive(href, exact);
             return (
               <motion.div
@@ -101,6 +101,7 @@ export default function Sidebar({ user }) {
                 initial={{ opacity: 0, x: -14 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.055 + 0.1, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+                className="group/nav"
               >
                 <Link
                   href={href}
@@ -109,7 +110,6 @@ export default function Sidebar({ user }) {
                   onMouseEnter={e => { if (!active) { e.currentTarget.style.background = hoverBg; e.currentTarget.style.color = textColor; } }}
                   onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ""; e.currentTarget.style.color = mutedText; } }}
                 >
-                  {/* Animated pill background — slides between nav items */}
                   {active && (
                     <motion.div
                       layoutId="nav-active-pill"
@@ -122,7 +122,26 @@ export default function Sidebar({ user }) {
                   <Icon size={16} className="relative z-10 shrink-0" />
                   <span className="relative z-10 flex-1">{label}</span>
 
-                  {/* Blue dot indicator — also layout-animated */}
+                  {/* Badge (Soon, Beta, etc.) */}
+                  {badge && !active && (
+                    <span
+                      className="relative z-10 text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wider uppercase"
+                      style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}
+                    >
+                      {badge}
+                    </span>
+                  )}
+
+                  {/* Keyboard shortcut hint — visible on hover */}
+                  {!badge && !active && shortcut && (
+                    <kbd
+                      className="relative z-10 text-[9px] font-black px-1 py-0.5 rounded opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150"
+                      style={{ background: chipBg, border: `1px solid ${chipBorder}`, color: mutedText }}
+                    >
+                      {shortcut}
+                    </kbd>
+                  )}
+
                   {active && (
                     <motion.div
                       layoutId="nav-active-dot"

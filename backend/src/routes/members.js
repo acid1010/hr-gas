@@ -4,7 +4,10 @@ const prisma = require("../../libs/prisma");
 
 router.get("/", async (req, res) => {
   try {
-    const { page = 1, limit = 10, keyword = "" } = req.query;
+    const { page = 1, limit = 10, keyword = "", sort = "name", order = "asc" } = req.query;
+    const ALLOWED_SORT = ["name", "nik", "join_date", "departement", "section", "status", "worker_stats"];
+    const sortField = ALLOWED_SORT.includes(sort) ? sort : "name";
+    const sortOrder = order === "desc" ? "desc" : "asc";
     const skip = (Number(page) - 1) * Number(limit);
     const isUUID =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -32,13 +35,14 @@ router.get("/", async (req, res) => {
       where,
       skip,
       take: Number(limit),
+      orderBy: { [sortField]: sortOrder },
     });
 
     res.status(200).json({
       data: members,
       currentPage: Number(page),
       totalPages: Math.ceil(totalMembers / Number(limit)),
-      totalMembers,
+      total: totalMembers,
     });
   } catch (error) {
     console.log(error);
