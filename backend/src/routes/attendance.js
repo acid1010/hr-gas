@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require("../../libs/prisma");
 const ZKLib = require("node-zklib");
 const XLSX = require("xlsx");
+const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
 
 const DEVICE_IP = process.env.ZK_IP || "192.128.69.33";
 const DEVICE_PORT = parseInt(process.env.ZK_PORT || "4370");
@@ -168,9 +169,8 @@ router.get("/report/excel", async (req, res) => {
     const start = new Date(year, mon - 1, 1);
     const end = new Date(year, mon, 1);
 
-    let workingDays = 0;
-    const cur = new Date(start);
-    while (cur < end) { if (cur.getDay() !== 0) workingDays++; cur.setDate(cur.getDate() + 1); }
+    const holidays = await getHolidaySet(prisma, start, end);
+    const workingDays = countWorkingDays(start, end, holidays);
 
     const employees = await prisma.users.findMany({
       where: { deletedAt: null },
