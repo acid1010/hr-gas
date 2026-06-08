@@ -96,6 +96,7 @@ router.put("/:id", async (req, res) => {
       worker_stats,
       join_date,
       link_image,
+      shift_id,
     } = req.body;
 
     console.log(req.body);
@@ -111,6 +112,7 @@ router.put("/:id", async (req, res) => {
         worker_stats,
         link_image,
         join_date: join_date ? new Date(join_date) : undefined,
+        shift_id: shift_id !== undefined ? (shift_id || null) : undefined,
       },
     });
 
