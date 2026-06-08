@@ -127,7 +127,7 @@ Used in `/api/performance/leaderboard` and `/display`:
 ```
 combined_score = round((attendance_rate × 0.6 + performance_rating × 0.4) × 100)
 
-attendance_rate    = days_present / working_days_in_month   (Mon–Sat, excludes Sunday)
+attendance_rate    = days_present / working_days_in_month   (Mon–Fri, excludes Sat/Sun + holidays)
 performance_rating = best→1.0 | good→0.75 | average→0.50 | worst→0.25
 ```
 
