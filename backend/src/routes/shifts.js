@@ -3,9 +3,12 @@ const router = express.Router();
 const prisma = require("../../libs/prisma");
 const { requireRole } = require("../middleware/auth");
 
-// times come in as 'HH:MM' strings; store on a fixed epoch date for TIME column
+// times come in as 'HH:MM' strings; store on a fixed epoch date for TIME column.
+// Force UTC (trailing Z) so the stored time matches the input — the frontend
+// reads it back with toISOString (also UTC). Without Z it parses as local and
+// shifts by the server's tz offset.
 function toTime(hhmm) {
-  return new Date(`1970-01-01T${hhmm}:00`);
+  return new Date(`1970-01-01T${hhmm}:00Z`);
 }
 
 // GET / — list with assigned worker count (admin + supervisor)
