@@ -12,6 +12,14 @@ function isWorkingDay(date, holidaySet) {
   return true;
 }
 
+// 'workday' | 'rest_day' | 'holiday' — holiday takes precedence
+function classifyDay(date, holidaySet) {
+  if (holidaySet && holidaySet.has(ymd(date))) return "holiday";
+  const day = date.getDay();
+  if (day === 0 || day === 6) return "rest_day";
+  return "workday";
+}
+
 // [start, end) — end exclusive
 function countWorkingDays(start, end, holidaySet) {
   let count = 0;
@@ -31,4 +39,4 @@ async function getHolidaySet(prisma, start, end) {
   return new Set(rows.map((r) => r.date.toISOString().slice(0, 10)));
 }
 
-module.exports = { isWorkingDay, countWorkingDays, getHolidaySet };
+module.exports = { isWorkingDay, countWorkingDays, getHolidaySet, classifyDay };
