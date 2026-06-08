@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Users, TrendingUp, Clock, Fingerprint, LogOut, Sun, Moon, Search } from "lucide-react";
+import { LayoutDashboard, Users, TrendingUp, Clock, CalendarClock, Fingerprint, LogOut, Sun, Moon, Search } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useTheme, useLang } from "./AppProviders";
 import { t } from "@/lib/i18n";
@@ -17,7 +17,8 @@ export default function Sidebar({ user }) {
     { href: "/employee",             label: t(lang, "nav.employee"),    icon: Users, exact: true, shortcut: "⌘2" },
     { href: "/attendance",           label: t(lang, "nav.attendance"),  icon: Fingerprint, shortcut: "⌘3" },
     { href: "/employee/performance", label: t(lang, "nav.performance"), icon: TrendingUp, shortcut: "⌘4" },
-    { href: "/overtime",             label: t(lang, "nav.overtime"),    icon: Clock, shortcut: "⌘5", badge: "Soon" },
+    { href: "/overtime",             label: t(lang, "nav.overtime"),    icon: Clock, shortcut: "⌘5" },
+    { href: "/shifts",               label: t(lang, "nav.shifts"),      icon: CalendarClock, shortcut: "⌘6" },
   ];
 
   const isActive = (href, exact) => {
