@@ -10,6 +10,12 @@ import OvertimeForm from "./OvertimeForm";
 
 const STATUS_COLOR = { pending: "#d6a23e", approved: "#3fa66a", rejected: "#e06666" };
 
+const DAYTYPE = {
+  workday:  { label: "Workday",  color: "#6b7a99" },
+  rest_day: { label: "Rest Day", color: "#d6a23e" },
+  holiday:  { label: "Holiday",  color: "#e06666" },
+};
+
 export default function OvertimePage() {
   const { p } = useAppSettings();
   const [role, setRole] = useState(null);
@@ -115,6 +121,12 @@ export default function OvertimePage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {r.day_type && DAYTYPE[r.day_type] && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide"
+                        style={{ background: `${DAYTYPE[r.day_type].color}22`, color: DAYTYPE[r.day_type].color }}>
+                        {DAYTYPE[r.day_type].label}
+                      </span>
+                    )}
                     <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide"
                       style={{ background: `${STATUS_COLOR[r.status]}22`, color: STATUS_COLOR[r.status] }}>
                       {r.status}
