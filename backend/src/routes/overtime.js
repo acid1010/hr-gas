@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../../libs/prisma");
 const { requireRole } = require("../middleware/auth");
-const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
 const { classifyDay, getHolidaySet } = require("../lib/workingDays");
 
 function computeHours(start, end) {
@@ -121,14 +121,15 @@ router.get("/export/excel", requireRole("admin"), async (req, res) => {
       }
     }
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [
-      { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 12 },
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 30 },
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(`Lembur ${month}`);
+    ws.columns = [
+      { width: 12 }, { width: 28 }, { width: 16 }, { width: 12 }, { width: 12 },
+      { width: 10 }, { width: 10 }, { width: 10 }, { width: 8 }, { width: 30 },
     ];
-    XLSX.utils.book_append_sheet(wb, ws, `Lembur ${month}`);
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    if (rows.length > 0) ws.addRow(Object.keys(rows[0]));
+    rows.forEach(r => ws.addRow(Object.values(r)));
+    const buf = await wb.xlsx.writeBuffer();
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="lembur_${month}.xlsx"`);

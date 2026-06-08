@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../../libs/prisma");
 const ZKLib = require("node-zklib");
-const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
 const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
 
 const DEVICE_IP = process.env.ZK_IP || "192.128.69.33";
@@ -218,15 +218,16 @@ router.get("/report/excel", async (req, res) => {
       };
     });
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [
-      { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
-      { wch: 16 }, { wch: 14 }, { wch: 30 },
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(`Laporan ${targetMonth}`);
+    ws.columns = [
+      { width: 12 }, { width: 28 }, { width: 16 }, { width: 14 }, { width: 12 },
+      { width: 10 }, { width: 10 }, { width: 10 }, { width: 14 }, { width: 16 },
+      { width: 16 }, { width: 14 }, { width: 30 },
     ];
-    XLSX.utils.book_append_sheet(wb, ws, `Laporan ${targetMonth}`);
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    if (rows.length > 0) ws.addRow(Object.keys(rows[0]));
+    rows.forEach(r => ws.addRow(Object.values(r)));
+    const buf = await wb.xlsx.writeBuffer();
 
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="laporan_hr_${targetMonth}.xlsx"`);
