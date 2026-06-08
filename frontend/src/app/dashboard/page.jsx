@@ -131,7 +131,9 @@ export default function Dashboard() {
       const hourlyData = Object.entries(hourMap).map(([h, cnt]) => ({ hour: String(h).padStart(2, "0"), punches: cnt }));
 
       const ratingMap = { best: 100, good: 75, average: 50, worst: 25 };
-      const scores = (perfRes?.data || []).map(d => ratingMap[d.status?.toLowerCase()] ?? 0).filter(Boolean);
+      const scores = (perfRes?.data || [])
+        .map(d => ratingMap[d.status?.toLowerCase()])
+        .filter(v => v !== undefined);
       const avgPerf = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
 
       const allMembers = membersRes?.data || [];
