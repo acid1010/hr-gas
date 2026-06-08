@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
-  if (pathname.startsWith("/display")) return NextResponse.next();
+
+  const reqHeaders = new Headers(request.headers);
+  reqHeaders.set("x-pathname", pathname);
+
+  if (pathname.startsWith("/display")) {
+    return NextResponse.next({ request: { headers: reqHeaders } });
+  }
 
   const token = request.cookies.get("accessToken");
   const isAuthPage = pathname.startsWith("/login");
@@ -16,7 +22,7 @@ export function middleware(request) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: reqHeaders } });
 }
 
 export const config = {

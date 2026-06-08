@@ -2,7 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/app/components/Sidebar";
 import AppProviders from "@/app/components/AppProviders";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import jwt from "jsonwebtoken";
 
 const geistSans = Geist({
@@ -23,9 +23,12 @@ export const metadata = {
 export default async function RootLayout({ children }) {
   const cookiesStore = await cookies();
   const token = cookiesStore.get("accessToken");
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "";
+  const isDisplay = pathname.startsWith("/display");
 
   let user = null;
-  if (token) {
+  if (token && !isDisplay) {
     try {
       user = jwt.decode(token.value);
     } catch {

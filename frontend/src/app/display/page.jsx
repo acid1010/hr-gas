@@ -2,19 +2,53 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Sun, Moon } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const REFRESH_INTERVAL = 5 * 60 * 1000;
+
+const DARK = {
+  pageBg: "#060810",
+  headerBg: "rgba(255,255,255,0.02)",
+  headerBorder: "rgba(255,255,255,0.05)",
+  divider: "rgba(255,255,255,0.04)",
+  cardBg: "rgba(255,255,255,0.03)",
+  cardBorder: "rgba(255,255,255,0.05)",
+  barBg: "rgba(255,255,255,0.06)",
+  text: "#ffffff",
+  muted: "#4a5568",
+  ambientBlue: "rgba(59,111,212,0.06)",
+  ambientGold: "rgba(245,158,11,0.03)",
+  clockColon: "#3b6fd4",
+  clockSec: "rgba(255,255,255,0.35)",
+  clockSecColon: "rgba(255,255,255,0.2)",
+  progressTrack: "rgba(255,255,255,0.06)",
+};
+
+const LIGHT = {
+  pageBg: "#f0f2f7",
+  headerBg: "rgba(255,255,255,0.9)",
+  headerBorder: "rgba(0,0,0,0.07)",
+  divider: "rgba(0,0,0,0.06)",
+  cardBg: "rgba(255,255,255,0.85)",
+  cardBorder: "rgba(0,0,0,0.07)",
+  barBg: "rgba(0,0,0,0.07)",
+  text: "#1a2035",
+  muted: "#64748b",
+  ambientBlue: "rgba(59,111,212,0.04)",
+  ambientGold: "rgba(245,158,11,0.02)",
+  clockColon: "#3b6fd4",
+  clockSec: "rgba(26,32,53,0.35)",
+  clockSecColon: "rgba(26,32,53,0.2)",
+  progressTrack: "rgba(0,0,0,0.08)",
+};
 
 function useRefreshCountdown(intervalMs) {
   const [secs, setSecs] = useState(Math.floor(intervalMs / 1000));
   useEffect(() => {
     setSecs(Math.floor(intervalMs / 1000));
     const id = setInterval(() => {
-      setSecs(s => {
-        if (s <= 1) return Math.floor(intervalMs / 1000);
-        return s - 1;
-      });
+      setSecs(s => (s <= 1 ? Math.floor(intervalMs / 1000) : s - 1));
     }, 1000);
     return () => clearInterval(id);
   }, [intervalMs]);
@@ -41,7 +75,6 @@ const RANK_META = [
   { color: "#cd7f32", glow: "rgba(205,127,50,0.12)",  label: "#3" },
 ];
 
-/* ---------- live clock ---------- */
 function useClock() {
   const [time, setTime] = useState({ h: "00", m: "00", s: "00" });
   const [date, setDate] = useState("");
@@ -58,7 +91,6 @@ function useClock() {
   return { time, date };
 }
 
-/* ---------- animated score counter ---------- */
 function AnimCounter({ to }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -75,8 +107,7 @@ function AnimCounter({ to }) {
   return <span ref={ref}>0</span>;
 }
 
-/* ---------- #1 spotlight card (left panel) ---------- */
-function SpotlightCard({ emp, rank = 1 }) {
+function SpotlightCard({ emp, rank = 1, C }) {
   const meta  = RANK_META[rank - 1] || RANK_META[0];
   const score = emp.combined_score ?? 0;
   const color = score >= 80 ? "#22c55e" : score >= 60 ? "#f59e0b" : "#ef4444";
@@ -89,23 +120,18 @@ function SpotlightCard({ emp, rank = 1 }) {
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       className="relative rounded-3xl flex flex-col overflow-hidden"
       style={{
-        background: "rgba(255,255,255,0.03)",
+        background: C.cardBg,
         border: `1.5px solid ${meta.color}28`,
         boxShadow: `0 0 60px ${meta.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
         flex: 1,
       }}
     >
-      {/* Ambient radial glow */}
       <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full pointer-events-none" style={{ background: `radial-gradient(circle, ${meta.color}22 0%, transparent 70%)` }} />
       <div className="absolute -bottom-16 -right-16 w-56 h-56 rounded-full pointer-events-none" style={{ background: `radial-gradient(circle, rgba(59,111,212,0.08) 0%, transparent 70%)` }} />
 
       <div className="relative z-10 flex flex-col h-full p-8">
-        {/* Rank badge */}
         <div className="flex items-center justify-between mb-auto">
-          <span
-            className="font-black tracking-tight"
-            style={{ color: meta.color, fontSize: "clamp(3rem, 6vw, 5rem)", lineHeight: 1 }}
-          >
+          <span className="font-black tracking-tight" style={{ color: meta.color, fontSize: "clamp(3rem, 6vw, 5rem)", lineHeight: 1 }}>
             {meta.label}
           </span>
           <div className="flex items-center gap-2">
@@ -114,69 +140,57 @@ function SpotlightCard({ emp, rank = 1 }) {
           </div>
         </div>
 
-        {/* Name + dept */}
         <div className="mt-8 mb-6">
-          {/* Avatar with animated glow ring */}
           <div className="relative mb-5" style={{ width: 100, height: 100 }}>
-            {/* Animated ring glow */}
             <motion.div
               className="absolute inset-0 rounded-full"
               style={{ boxShadow: `0 0 0 3px ${meta.color}50, 0 0 32px ${meta.color}30` }}
               animate={{ boxShadow: [`0 0 0 3px ${meta.color}50, 0 0 24px ${meta.color}22`, `0 0 0 5px ${meta.color}80, 0 0 48px ${meta.color}44`, `0 0 0 3px ${meta.color}50, 0 0 24px ${meta.color}22`] }}
               transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
             />
-            <div
-              className="relative w-full h-full rounded-full overflow-hidden"
-              style={{ background: deptColor(emp.departement), boxShadow: `0 0 0 3px ${color}40` }}
-            >
+            <div className="relative w-full h-full rounded-full overflow-hidden" style={{ background: deptColor(emp.departement), boxShadow: `0 0 0 3px ${color}40` }}>
               <div className="absolute inset-0 flex items-center justify-center font-black text-white" style={{ fontSize: "2.6rem" }}>
                 {(emp.name || "?")[0].toUpperCase()}
               </div>
               {emp.link_image && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={getDrivePreview(emp.link_image)}
-                  alt={emp.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+                <img src={getDrivePreview(emp.link_image)} alt={emp.name} className="absolute inset-0 w-full h-full object-cover" />
               )}
             </div>
           </div>
-          <h2 className="font-black text-white leading-tight mb-2" style={{ fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)" }}>
+          <h2 className="font-black leading-tight mb-2" style={{ color: C.text, fontSize: "clamp(1.6rem, 3.2vw, 2.8rem)" }}>
             {emp.name}
           </h2>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-black px-2.5 py-1 rounded-lg" style={{ background: `${deptColor(emp.departement)}22`, color: deptColor(emp.departement) }}>
               {emp.departement?.toUpperCase() || "—"}
             </span>
-            <span className="text-xs font-mono" style={{ color: "#4a5568" }}>{emp.nik}</span>
+            <span className="text-xs font-mono" style={{ color: C.muted }}>{emp.nik}</span>
           </div>
         </div>
 
-        {/* Stats row */}
         <div className="flex gap-4 mb-6">
           <div>
-            <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: "#4a5568" }}>Kehadiran</p>
+            <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: C.muted }}>Kehadiran</p>
             <p className="font-black text-2xl" style={{ color: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444" }}>
               {emp.attendance_rate}%
             </p>
           </div>
-          <div className="w-px self-stretch" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="w-px self-stretch" style={{ background: C.barBg }} />
           <div>
-            <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: "#4a5568" }}>Performa</p>
+            <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: C.muted }}>Performa</p>
             <p className="font-black text-2xl" style={{ color: "#5b8df8" }}>{emp.performance_status?.toUpperCase() || "—"}</p>
           </div>
-          <div className="w-px self-stretch" style={{ background: "rgba(255,255,255,0.06)" }} />
+          <div className="w-px self-stretch" style={{ background: C.barBg }} />
           <div>
-            <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: "#4a5568" }}>Skor</p>
+            <p className="text-[10px] font-black tracking-widest uppercase mb-1" style={{ color: C.muted }}>Skor</p>
             <p className="font-black text-2xl" style={{ color }}>
               <AnimCounter to={score} />
             </p>
           </div>
         </div>
 
-        {/* Score bar */}
-        <div className="rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", height: 6 }}>
+        <div className="rounded-full overflow-hidden" style={{ background: C.barBg, height: 6 }}>
           <motion.div
             className="h-full rounded-full"
             style={{ background: `linear-gradient(90deg, ${color}88, ${color})` }}
@@ -190,8 +204,7 @@ function SpotlightCard({ emp, rank = 1 }) {
   );
 }
 
-/* ---------- compact rank row (right panel) ---------- */
-function RankRow({ emp, rank, index }) {
+function RankRow({ emp, rank, index, C }) {
   const meta  = rank <= 3 ? RANK_META[rank - 1] : null;
   const score = emp.combined_score ?? 0;
   const color = score >= 80 ? "#22c55e" : score >= 60 ? "#f59e0b" : "#ef4444";
@@ -203,21 +216,19 @@ function RankRow({ emp, rank, index }) {
       transition={{ delay: index * 0.045, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className="relative flex items-center gap-4 pl-5 pr-4 py-3.5 rounded-2xl transition-all duration-200 overflow-hidden"
       style={{
-        background: meta ? `${meta.color}08` : "rgba(255,255,255,0.02)",
-        border: `1px solid ${meta ? `${meta.color}18` : "rgba(255,255,255,0.05)"}`,
+        background: meta ? `${meta.color}08` : C.cardBg,
+        border: `1px solid ${meta ? `${meta.color}18` : C.cardBorder}`,
         boxShadow: meta && rank === 1 ? `inset 4px 0 0 ${meta.color}` : meta ? `inset 3px 0 0 ${meta.color}50` : undefined,
       }}
     >
-      {/* Rank */}
       <div className="w-8 shrink-0 text-center">
         {meta ? (
           <span className="text-sm font-black" style={{ color: meta.color }}>{rank}</span>
         ) : (
-          <span className="text-sm font-bold" style={{ color: "#4a5568" }}>#{rank}</span>
+          <span className="text-sm font-bold" style={{ color: C.muted }}>#{rank}</span>
         )}
       </div>
 
-      {/* Avatar */}
       <div className="relative w-9 h-9 rounded-xl overflow-hidden shrink-0" style={{ background: deptColor(emp.departement) }}>
         <div className="absolute inset-0 flex items-center justify-center text-sm font-black text-white">
           {(emp.name || "?")[0].toUpperCase()}
@@ -228,17 +239,15 @@ function RankRow({ emp, rank, index }) {
         )}
       </div>
 
-      {/* Name + dept */}
       <div className="flex-1 min-w-0">
-        <p className="font-black text-white truncate" style={{ fontSize: "0.95rem" }}>{emp.name}</p>
-        <p className="text-[11px] font-bold uppercase tracking-wider truncate" style={{ color: "#4a5568" }}>
+        <p className="font-black truncate" style={{ fontSize: "0.95rem", color: C.text }}>{emp.name}</p>
+        <p className="text-[11px] font-bold uppercase tracking-wider truncate" style={{ color: C.muted }}>
           {emp.departement} · {emp.nik}
         </p>
       </div>
 
-      {/* Score bar + number */}
       <div className="flex items-center gap-3 shrink-0">
-        <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+        <div className="w-24 h-1.5 rounded-full overflow-hidden" style={{ background: C.barBg }}>
           <motion.div
             className="h-full rounded-full"
             style={{ background: color }}
@@ -253,7 +262,6 @@ function RankRow({ emp, rank, index }) {
   );
 }
 
-/* ---------- main display ---------- */
 export default function Display() {
   const { time, date } = useClock();
   const refreshIn = useRefreshCountdown(REFRESH_INTERVAL);
@@ -262,6 +270,22 @@ export default function Display() {
   const [month, setMonth] = useState(defaultMonth);
   const [data,  setData]  = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("gas-display-theme");
+    if (saved === "light") setIsDark(false);
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      localStorage.setItem("gas-display-theme", next ? "dark" : "light");
+      return next;
+    });
+  };
+
+  const C = isDark ? DARK : LIGHT;
 
   const load = useCallback(async () => {
     try {
@@ -287,74 +311,81 @@ export default function Display() {
   return (
     <div
       className="h-screen flex flex-col overflow-hidden"
-      style={{ background: "#060810", fontFamily: "var(--font-geist, Geist, system-ui, sans-serif)", userSelect: "none" }}
+      style={{ background: C.pageBg, fontFamily: "var(--font-geist, Geist, system-ui, sans-serif)", userSelect: "none", transition: "background 0.3s" }}
     >
-      {/* Ambient background glow */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 70% 50% at 30% 50%, rgba(59,111,212,0.06) 0%, transparent 70%)" }} />
-      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(245,158,11,0.03) 0%, transparent 60%)" }} />
+      {/* Ambient background */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 70% 50% at 30% 50%, ${C.ambientBlue} 0%, transparent 70%)` }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse 60% 60% at 80% 20%, ${C.ambientGold} 0%, transparent 60%)` }} />
 
       {/* ---- HEADER BAR ---- */}
-      <div className="relative z-10 flex items-center justify-between px-8 py-4 shrink-0" style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="relative z-10 flex items-center justify-between px-8 py-4 shrink-0" style={{ background: C.headerBg, borderBottom: `1px solid ${C.headerBorder}` }}>
 
-        {/* Brand */}
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xs font-black text-white shrink-0" style={{ background: "#3b6fd4", boxShadow: "0 0 20px rgba(59,111,212,0.4)" }}>GAS</div>
           <div>
-            <p className="text-sm font-black tracking-widest uppercase text-white">PT. Global Anugerah Setia</p>
-            <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: "#4a5568" }}>Papan Peringkat Kinerja SDM</p>
+            <p className="text-sm font-black tracking-widest uppercase" style={{ color: C.text }}>PT. Global Anugerah Setia</p>
+            <p className="text-[10px] font-bold tracking-widest uppercase" style={{ color: C.muted }}>Papan Peringkat Kinerja SDM</p>
           </div>
         </div>
 
-        {/* Clock — centerpiece */}
         <div className="flex items-end gap-0 tabular-nums" style={{ fontFamily: "var(--font-geist-mono, monospace)", lineHeight: 1 }}>
-          <span className="font-black text-white" style={{ fontSize: "3.2rem" }}>{time.h}</span>
-          <span className="font-black pb-1" style={{ color: "#3b6fd4", fontSize: "2.6rem" }}>:</span>
-          <span className="font-black text-white" style={{ fontSize: "3.2rem" }}>{time.m}</span>
-          <span className="font-black pb-1" style={{ color: "rgba(255,255,255,0.2)", fontSize: "2.6rem" }}>:</span>
-          <span className="font-black" style={{ color: "rgba(255,255,255,0.35)", fontSize: "3.2rem" }}>{time.s}</span>
+          <span className="font-black" style={{ color: C.text, fontSize: "3.2rem" }}>{time.h}</span>
+          <span className="font-black pb-1" style={{ color: C.clockColon, fontSize: "2.6rem" }}>:</span>
+          <span className="font-black" style={{ color: C.text, fontSize: "3.2rem" }}>{time.m}</span>
+          <span className="font-black pb-1" style={{ color: C.clockSecColon, fontSize: "2.6rem" }}>:</span>
+          <span className="font-black" style={{ color: C.clockSec, fontSize: "3.2rem" }}>{time.s}</span>
         </div>
 
-        {/* Month + date + refresh countdown */}
-        <div className="text-right flex flex-col items-end gap-1.5">
-          <span className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest" style={{ background: "rgba(91,141,248,0.12)", color: "#5b8df8" }}>
-            {monthLabel}
-          </span>
-          <p className="text-[11px] capitalize font-semibold" style={{ color: "#4a5568" }}>{date}</p>
-          <div className="flex items-center gap-1.5">
-            <div className="relative w-16 h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <motion.div
-                className="absolute left-0 top-0 h-full rounded-full"
-                style={{ background: "#5b8df8", width: `${(refreshIn / (REFRESH_INTERVAL / 1000)) * 100}%` }}
-                transition={{ duration: 0.9, ease: "linear" }}
-              />
-            </div>
-            <span className="text-[10px] font-mono font-bold tabular-nums" style={{ color: "#4a5568" }}>
-              {Math.floor(refreshIn / 60)}:{String(refreshIn % 60).padStart(2, "0")}
+        <div className="flex items-end gap-4">
+          <div className="text-right flex flex-col items-end gap-1.5">
+            <span className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest" style={{ background: "rgba(91,141,248,0.12)", color: "#5b8df8" }}>
+              {monthLabel}
             </span>
+            <p className="text-[11px] capitalize font-semibold" style={{ color: C.muted }}>{date}</p>
+            <div className="flex items-center gap-1.5">
+              <div className="relative w-16 h-0.5 rounded-full overflow-hidden" style={{ background: C.progressTrack }}>
+                <motion.div
+                  className="absolute left-0 top-0 h-full rounded-full"
+                  style={{ background: "#5b8df8", width: `${(refreshIn / (REFRESH_INTERVAL / 1000)) * 100}%` }}
+                  transition={{ duration: 0.9, ease: "linear" }}
+                />
+              </div>
+              <span className="text-[10px] font-mono font-bold tabular-nums" style={{ color: C.muted }}>
+                {Math.floor(refreshIn / 60)}:{String(refreshIn % 60).padStart(2, "0")}
+              </span>
+            </div>
           </div>
+
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-200"
+            style={{ background: C.cardBg, border: `1px solid ${C.cardBorder}`, color: C.muted }}
+          >
+            {isDark ? <Sun size={14} /> : <Moon size={14} />}
+          </button>
         </div>
       </div>
 
       {/* ---- MAIN CONTENT ---- */}
       <div className="relative z-10 flex-1 flex gap-0 overflow-hidden">
 
-        {/* LEFT — Spotlight podium (top 3) */}
-        <div className="flex flex-col gap-3 p-6 overflow-hidden" style={{ width: "38%", borderRight: "1px solid rgba(255,255,255,0.04)" }}>
+        {/* LEFT — Spotlight podium */}
+        <div className="flex flex-col gap-3 p-6 overflow-hidden" style={{ width: "38%", borderRight: `1px solid ${C.divider}` }}>
           <p className="text-[10px] font-black tracking-[0.28em] uppercase mb-1" style={{ color: "#f59e0b" }}>
             Top Performers
           </p>
 
           <AnimatePresence mode="wait">
             {loaded && leader ? (
-              <SpotlightCard key={`leader-${leader.user_id}`} emp={leader} rank={1} />
+              <SpotlightCard key={`leader-${leader.user_id}`} emp={leader} rank={1} C={C} />
             ) : loaded ? (
-              <motion.div key="no-leader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex items-center justify-center" style={{ color: "#4a5568", fontSize: "0.875rem" }}>
+              <motion.div key="no-leader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1 flex items-center justify-center" style={{ color: C.muted, fontSize: "0.875rem" }}>
                 Belum ada data untuk bulan ini
               </motion.div>
             ) : null}
           </AnimatePresence>
 
-          {/* #2 and #3 side by side */}
           {(runner1 || runner2) && (
             <div className="grid grid-cols-2 gap-3 shrink-0">
               {[runner1, runner2].map((emp, idx) => {
@@ -383,10 +414,10 @@ export default function Display() {
                         )}
                       </div>
                     </div>
-                    <p className="font-black text-white text-sm truncate leading-tight">{emp.name}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-wider mb-3 truncate" style={{ color: "#4a5568" }}>{emp.departement}</p>
+                    <p className="font-black text-sm truncate leading-tight" style={{ color: C.text }}>{emp.name}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-3 truncate" style={{ color: C.muted }}>{emp.departement}</p>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: C.barBg }}>
                         <motion.div className="h-full rounded-full" style={{ background: color }} initial={{ width: 0 }} animate={{ width: `${score}%` }} transition={{ duration: 1, delay: 0.4 + idx * 0.1 }} />
                       </div>
                       <span className="font-black text-sm shrink-0" style={{ color }}>{score}</span>
@@ -398,7 +429,7 @@ export default function Display() {
           )}
         </div>
 
-        {/* RIGHT — Full leaderboard list */}
+        {/* RIGHT — Full leaderboard */}
         <div className="flex-1 flex flex-col overflow-hidden p-6">
           <p className="text-[10px] font-black tracking-[0.28em] uppercase mb-3 shrink-0" style={{ color: "#5b8df8" }}>
             Semua Peringkat
@@ -407,11 +438,11 @@ export default function Display() {
           <div className="flex-1 overflow-y-auto flex flex-col gap-2" style={{ scrollbarWidth: "none" }}>
             <AnimatePresence>
               {data.map((emp, i) => (
-                <RankRow key={emp.user_id} emp={emp} rank={i + 1} index={i} />
+                <RankRow key={emp.user_id} emp={emp} rank={i + 1} index={i} C={C} />
               ))}
             </AnimatePresence>
             {loaded && data.length === 0 && (
-              <div className="flex-1 flex items-center justify-center" style={{ color: "#4a5568", fontSize: "0.875rem" }}>
+              <div className="flex-1 flex items-center justify-center" style={{ color: C.muted, fontSize: "0.875rem" }}>
                 Belum ada data untuk bulan ini
               </div>
             )}
