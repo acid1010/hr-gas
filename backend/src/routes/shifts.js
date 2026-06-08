@@ -80,4 +80,44 @@ router.delete("/:id", requireRole("admin"), async (req, res) => {
   }
 });
 
+// GET /coverage — Shifts × Departments worker matrix (admin + supervisor)
+router.get("/coverage", requireRole("admin", "supervisor"), async (req, res) => {
+  try {
+    const shifts = await prisma.shift.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, start_time: true, end_time: true },
+    });
+    const users = await prisma.users.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, nik: true, departement: true, shift_id: true },
+    });
+
+    const DEPT_FALLBACK = "—";
+    const deptSet = new Set();
+    const matrix = {};
+    const totals = {};
+
+    for (const u of users) {
+      const bucket = u.shift_id ? u.shift_id : "unassigned";
+      const dept = u.departement && u.departement.trim() ? u.departement : DEPT_FALLBACK;
+      deptSet.add(dept);
+      if (!matrix[bucket]) matrix[bucket] = {};
+      if (!matrix[bucket][dept]) matrix[bucket][dept] = [];
+      matrix[bucket][dept].push({ id: u.id, name: u.name, nik: u.nik ? String(u.nik) : null });
+      totals[bucket] = (totals[bucket] || 0) + 1;
+    }
+
+    const departments = [...deptSet].sort((a, b) => {
+      if (a === DEPT_FALLBACK) return 1;
+      if (b === DEPT_FALLBACK) return -1;
+      return a.localeCompare(b);
+    });
+
+    res.status(200).json({ shifts, departments, matrix, totals });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 module.exports = router;
