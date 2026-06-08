@@ -101,6 +101,8 @@ router.get("/export/excel", requireRole("admin"), async (req, res) => {
       orderBy: { date: "asc" },
     });
 
+    const holidays = await getHolidaySet(prisma, start, end);
+
     const rows = [];
     for (const r of requests) {
       for (const l of r.lines) {
@@ -109,6 +111,7 @@ router.get("/export/excel", requireRole("admin"), async (req, res) => {
           Nama: l.worker?.name || "",
           Departemen: r.departement || "",
           Tanggal: new Date(r.date).toISOString().slice(0, 10),
+          "Tipe Hari": classifyDay(new Date(r.date), holidays),
           "Jam Mulai": new Date(l.start_time).toISOString().slice(11, 16),
           "Jam Selesai": new Date(l.end_time).toISOString().slice(11, 16),
           "Total Jam": Number(l.hours),
@@ -121,7 +124,7 @@ router.get("/export/excel", requireRole("admin"), async (req, res) => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows);
     ws["!cols"] = [
-      { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 12 },
+      { wch: 12 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 12 },
       { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 30 },
     ];
     XLSX.utils.book_append_sheet(wb, ws, `Lembur ${month}`);
