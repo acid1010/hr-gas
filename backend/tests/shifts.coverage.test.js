@@ -19,7 +19,8 @@ const adminCookie = `accessToken=${jwt.sign({ id: "admin-cov", roleuser: "admin"
 const supCookie = `accessToken=${jwt.sign({ id: "sup-cov", roleuser: "supervisor" }, process.env.JWT_SECRET)}`;
 
 test("coverage: assigned worker appears in matrix[shift][dept]; supervisor can read", async () => {
-  const worker = await prisma.users.findFirst({ where: { deletedAt: null }, select: { id: true, departement: true, shift_id: true } });
+  // order by id desc to avoid racing shifts.test.js, which mutates the first-row worker in parallel
+  const worker = await prisma.users.findFirst({ where: { deletedAt: null }, orderBy: { id: "desc" }, select: { id: true, departement: true, shift_id: true } });
   const created = await request(app).post("/api/shifts").set("Cookie", adminCookie)
     .send({ name: "CovTest", start_time: "07:00", end_time: "15:00" });
   const shiftId = created.body.data.id;
@@ -45,7 +46,7 @@ test("coverage: assigned worker appears in matrix[shift][dept]; supervisor can r
 });
 
 test("coverage: an unassigned worker appears under 'unassigned'", async () => {
-  const worker = await prisma.users.findFirst({ where: { deletedAt: null }, select: { id: true, shift_id: true } });
+  const worker = await prisma.users.findFirst({ where: { deletedAt: null }, orderBy: { id: "desc" }, select: { id: true, shift_id: true } });
   await prisma.users.update({ where: { id: worker.id }, data: { shift_id: null } });
   try {
     const res = await request(app).get("/api/shifts/coverage").set("Cookie", adminCookie);
