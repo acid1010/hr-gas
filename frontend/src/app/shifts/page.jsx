@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2, Clock, CalendarDays } from "lucide-react";
+import { Plus, Pencil, Trash2, Clock, CalendarDays, Grid3x3 } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
@@ -20,6 +20,9 @@ export default function ShiftsPage() {
   const [editing, setEditing] = useState(null);
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayName, setNewHolidayName] = useState("");
+  const [tab, setTab] = useState("shifts"); // 'shifts' | 'holidays' | 'coverage'
+  const [coverage, setCoverage] = useState(null);
+  const [cellWorkers, setCellWorkers] = useState(null); // { title, workers: [] } | null
 
   const isAdmin = role === "admin";
 
@@ -31,12 +34,17 @@ export default function ShiftsPage() {
     try { const r = await fetchWithAuth(`${apiBaseUrl}/api/holidays?year=${year}`); setHolidays(r.data || []); }
     catch { setHolidays([]); }
   }, [year]);
+  const loadCoverage = useCallback(async () => {
+    try { const r = await fetchWithAuth(`${apiBaseUrl}/api/shifts/coverage`); setCoverage(r); }
+    catch { setCoverage(null); }
+  }, []);
 
   useEffect(() => {
     fetchWithAuth(`${apiBaseUrl}/auth/me`).then((u) => setRole(u.roleuser)).catch(() => setRole(null));
   }, []);
   useEffect(() => { loadShifts(); }, [loadShifts]);
   useEffect(() => { loadHolidays(); }, [loadHolidays]);
+  useEffect(() => { if (tab === "coverage") loadCoverage(); }, [tab, loadCoverage]);
 
   const deleteShift = async (id) => {
     if (!confirm("Delete this shift?")) return;
@@ -66,8 +74,27 @@ export default function ShiftsPage() {
           <h1 className="text-[1.8rem] font-black tracking-tight leading-none" style={{ color: p.text }}>Shifts &amp; Calendar</h1>
         </div>
 
+        <div className="flex gap-2 mb-6">
+          {[
+            { k: "shifts", label: "Shifts" },
+            { k: "holidays", label: "Holidays" },
+            { k: "coverage", label: "Coverage" },
+          ].map((t) => (
+            <button key={t.k} onClick={() => setTab(t.k)}
+              className="px-3 py-1.5 rounded-lg text-[11px] font-bold"
+              style={{
+                background: tab === t.k ? p.primary : p.cardBg,
+                color: tab === t.k ? "#fff" : p.muted,
+                border: `1px solid ${p.border}`,
+              }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Shifts panel */}
+          {tab === "shifts" && (
           <div className="p-5 rounded-2xl" style={card}>
             <div className="flex items-center justify-between mb-4">
               <span className="flex items-center gap-2 text-[13px] font-black" style={{ color: p.text }}><Clock size={15} /> Shifts</span>
@@ -98,8 +125,10 @@ export default function ShiftsPage() {
               ))}
             </div>
           </div>
+          )}
 
           {/* Holidays panel */}
+          {tab === "holidays" && (
           <div className="p-5 rounded-2xl" style={card}>
             <div className="flex items-center justify-between mb-4">
               <span className="flex items-center gap-2 text-[13px] font-black" style={{ color: p.text }}><CalendarDays size={15} /> Holidays</span>
@@ -128,11 +157,72 @@ export default function ShiftsPage() {
               ))}
             </div>
           </div>
+          )}
         </div>
+
+        {tab === "coverage" && (
+          <div className="p-5 rounded-2xl overflow-x-auto" style={card}>
+            <div className="flex items-center gap-2 mb-4">
+              <Grid3x3 size={15} style={{ color: p.text }} />
+              <span className="text-[13px] font-black" style={{ color: p.text }}>Coverage</span>
+              <span className="text-[11px]" style={{ color: p.faint }}>Reassign workers on the Employee page.</span>
+            </div>
+            {!coverage ? (
+              <p className="text-[12px]" style={{ color: p.faint }}>Loading…</p>
+            ) : (
+              <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th className="text-[11px] font-bold p-2" style={{ color: p.muted }}>Shift</th>
+                    {coverage.departments.map((d) => (
+                      <th key={d} className="text-[11px] font-bold p-2 text-center" style={{ color: p.muted }}>{d}</th>
+                    ))}
+                    <th className="text-[11px] font-bold p-2 text-center" style={{ color: p.muted }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...coverage.shifts.map((s) => ({ key: s.id, label: s.name })), { key: "unassigned", label: "Unassigned" }].map((row) => (
+                    <tr key={row.key} style={{ borderTop: `1px solid ${p.border}` }}>
+                      <td className="text-[12px] font-bold p-2" style={{ color: p.text }}>{row.label}</td>
+                      {coverage.departments.map((d) => {
+                        const workers = coverage.matrix?.[row.key]?.[d] || [];
+                        const n = workers.length;
+                        const bg = n === 0 ? "#e0666622" : n <= 2 ? "#d6a23e22" : p.inputBg;
+                        return (
+                          <td key={d} className="p-1.5 text-center">
+                            <button
+                              disabled={n === 0}
+                              onClick={() => setCellWorkers({ title: `${row.label} · ${d}`, workers })}
+                              className="w-full py-1.5 rounded-lg text-[12px] font-bold disabled:cursor-default"
+                              style={{ background: bg, color: p.text }}>
+                              {n}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      <td className="text-[12px] font-black p-2 text-center" style={{ color: p.text }}>{coverage.totals?.[row.key] || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       </div>
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={editing ? "Edit Shift" : "New Shift"} subtitle="Company-wide shift definition">
         <ShiftForm existing={editing} onSuccess={() => { setDrawerOpen(false); loadShifts(); }} />
+      </Drawer>
+
+      <Drawer open={!!cellWorkers} onClose={() => setCellWorkers(null)} title={cellWorkers?.title || "Workers"} subtitle="Assigned workers">
+        <div className="flex flex-col gap-2">
+          {(cellWorkers?.workers || []).map((w) => (
+            <div key={w.id} className="flex items-center justify-between p-2.5 rounded-xl" style={{ background: p.inputBg }}>
+              <span className="text-[12px] font-bold" style={{ color: p.text }}>{w.name || "—"}</span>
+              {w.nik && <span className="text-[11px]" style={{ color: p.muted }}>{w.nik}</span>}
+            </div>
+          ))}
+        </div>
       </Drawer>
     </main>
   );
