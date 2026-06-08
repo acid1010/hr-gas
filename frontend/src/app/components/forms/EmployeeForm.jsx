@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ImageOff, LinkIcon, ChevronDown } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
+import fetchWithAuth from "@/lib/fetchWithAuth";
+import apiBaseUrl from "@/lib/urlEndPoint";
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -32,6 +34,10 @@ const EmployeeForm = ({ formData, onChange }) => {
   const { p } = useAppSettings();
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError]   = useState(false);
+  const [shifts, setShifts]       = useState([]);
+  useEffect(() => {
+    fetchWithAuth(`${apiBaseUrl}/api/shifts`).then((r) => setShifts(r.data || [])).catch(() => setShifts([]));
+  }, []);
 
   const photoUrl   = formData?.link_image || "";
   const previewSrc = getDrivePreview(photoUrl);
@@ -193,6 +199,13 @@ const EmployeeForm = ({ formData, onChange }) => {
           <option value="magang">Magang</option>
           <option value="borongan">Borongan</option>
           <option value="pkwt">PKWT</option>
+        </SelectField>
+
+        <SelectField label="Shift" name="shift_id" value={formData?.shift_id || ""} onChange={handleChange}>
+          <option value="">No shift</option>
+          {shifts.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
         </SelectField>
       </div>
 
