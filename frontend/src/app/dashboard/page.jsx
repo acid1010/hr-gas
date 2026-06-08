@@ -530,9 +530,9 @@ export default function Dashboard() {
           >
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
-                {t("dashboard.deptBreakdown") || "Department Attendance"}
+                {t("dashboard.deptBreakdown")}
               </p>
-              <span className="text-[10px] font-bold" style={{ color: p.faint }}>Today</span>
+              <span className="text-[10px] font-bold" style={{ color: p.faint }}>{t("dashboard.today")}</span>
             </div>
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               {deptStats.map(({ dept, total, present, absent: absCnt, rate }, i) => {
@@ -587,7 +587,7 @@ export default function Dashboard() {
           >
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
-                Workforce Composition
+                {t("dashboard.workforceComposition")}
               </p>
               <span className="text-[10px] font-bold" style={{ color: p.faint }}>{kpi.totalEmployees} total</span>
             </div>

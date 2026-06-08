@@ -57,6 +57,9 @@ export const translations = {
       attendanceChart: "Kehadiran — Hari Ini",
       absentList: "Tidak Hadir Hari Ini",
       allPresent: "Semua karyawan hadir",
+      deptBreakdown: "Kehadiran per Departemen",
+      workforceComposition: "Komposisi Karyawan",
+      today: "Hari Ini",
     },
     employee: {
       title: "Karyawan",
@@ -202,6 +205,9 @@ export const translations = {
       attendanceChart: "Attendance Punches — Today",
       absentList: "Absent Today",
       allPresent: "All employees present",
+      deptBreakdown: "Department Attendance",
+      workforceComposition: "Workforce Composition",
+      today: "Today",
     },
     employee: {
       title: "Employee",
