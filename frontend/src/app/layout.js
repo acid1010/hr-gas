@@ -36,7 +36,7 @@ export default async function RootLayout({ children }) {
     <html
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      data-theme="gas-dark"
+      data-theme="gas-light"
       suppressHydrationWarning
     >
       {/* Sync theme before first paint — prevents flash for light-mode users */}
