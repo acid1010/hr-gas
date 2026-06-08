@@ -50,9 +50,9 @@ export default async function RootLayout({ children }) {
       <body className="min-h-screen" suppressHydrationWarning>
         <AppProviders>
           {user ? (
-            <div className="flex min-h-screen">
+            <div className="min-h-screen">
               <Sidebar user={user} />
-              <main className="flex-1 ml-64 min-h-screen">{children}</main>
+              <main className="ml-64 min-h-screen">{children}</main>
             </div>
           ) : (
             children
