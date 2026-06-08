@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const prisma = require("../../libs/prisma");
+const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
 
 router.post("/post", async (req, res) => {
   const { user_id, quarter, status, description } = req.body;
@@ -49,13 +50,9 @@ router.get("/leaderboard", async (req, res) => {
     const start = new Date(year, mon - 1, 1);
     const end = new Date(year, mon, 1);
 
-    // Working days (Mon–Sat, exclude Sunday)
-    let workingDays = 0;
-    const cur = new Date(start);
-    while (cur < end) {
-      if (cur.getDay() !== 0) workingDays++;
-      cur.setDate(cur.getDate() + 1);
-    }
+    // Working days (Mon–Fri, minus holidays)
+    const holidays = await getHolidaySet(prisma, start, end);
+    const workingDays = countWorkingDays(start, end, holidays);
 
     const employees = await prisma.users.findMany({
       where: { deletedAt: null },
