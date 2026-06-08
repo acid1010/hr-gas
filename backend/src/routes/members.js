@@ -212,4 +212,23 @@ router.patch("/delete/:id", async (req, res) => {
   }
 });
 
+// PATCH /:id/shift — assign/unassign a worker's shift
+router.patch("/:id/shift", async (req, res) => {
+  try {
+    const { shift_id } = req.body;
+    if (shift_id) {
+      const shift = await prisma.shift.findUnique({ where: { id: shift_id } });
+      if (!shift) return res.status(400).json({ error: "Shift not found" });
+    }
+    const updated = await prisma.users.update({
+      where: { id: req.params.id },
+      data: { shift_id: shift_id || null },
+    });
+    res.status(200).json({ message: "Shift assigned", data: updated });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
 module.exports = router;
