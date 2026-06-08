@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require("../../libs/prisma");
 const { requireRole } = require("../middleware/auth");
 const XLSX = require("xlsx");
+const { classifyDay, getHolidaySet } = require("../lib/workingDays");
 
 function computeHours(start, end) {
   const s = new Date(start).getTime();
@@ -60,7 +61,7 @@ router.get("/", requireRole("admin", "supervisor"), async (req, res) => {
       ...(date && { date: new Date(date) }),
       ...(departement && { departement: { contains: departement, mode: "insensitive" } }),
     };
-    const data = await prisma.overtime_request.findMany({
+    const requests = await prisma.overtime_request.findMany({
       where,
       orderBy: { created_at: "desc" },
       include: {
@@ -69,6 +70,16 @@ router.get("/", requireRole("admin", "supervisor"), async (req, res) => {
         approver: { select: { name: true } },
       },
     });
+    let data = requests;
+    if (requests.length > 0) {
+      const times = requests.map((r) => new Date(r.date).getTime());
+      const min = new Date(Math.min(...times));
+      const max = new Date(Math.max(...times));
+      const spanEnd = new Date(max);
+      spanEnd.setDate(spanEnd.getDate() + 1); // inclusive of max date
+      const holidays = await getHolidaySet(prisma, min, spanEnd);
+      data = requests.map((r) => ({ ...r, day_type: classifyDay(new Date(r.date), holidays) }));
+    }
     res.status(200).json({ data });
   } catch (error) {
     console.log(error);
@@ -140,7 +151,11 @@ router.get("/:id", requireRole("admin", "supervisor"), async (req, res) => {
     if (!isAdmin(req) && r.submitted_by !== req.user.id) {
       return res.status(403).json({ error: "Forbidden" });
     }
-    res.status(200).json({ data: r });
+    const d = new Date(r.date);
+    const dEnd = new Date(d);
+    dEnd.setDate(dEnd.getDate() + 1);
+    const holidays = await getHolidaySet(prisma, d, dEnd);
+    res.status(200).json({ data: { ...r, day_type: classifyDay(d, holidays) } });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Internal Server Error" });
