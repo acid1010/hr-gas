@@ -1,0 +1,83 @@
+const express = require("express");
+const router = express.Router();
+const prisma = require("../../libs/prisma");
+const { requireRole } = require("../middleware/auth");
+
+// times come in as 'HH:MM' strings; store on a fixed epoch date for TIME column
+function toTime(hhmm) {
+  return new Date(`1970-01-01T${hhmm}:00`);
+}
+
+// GET / — list with assigned worker count (admin + supervisor)
+router.get("/", requireRole("admin", "supervisor"), async (req, res) => {
+  try {
+    const shifts = await prisma.shift.findMany({ orderBy: { name: "asc" } });
+    const counts = await prisma.users.groupBy({
+      by: ["shift_id"],
+      where: { deletedAt: null, shift_id: { not: null } },
+      _count: { _all: true },
+    });
+    const countMap = {};
+    for (const c of counts) countMap[c.shift_id] = c._count._all;
+    const data = shifts.map((s) => ({ ...s, worker_count: countMap[s.id] || 0 }));
+    res.status(200).json({ data });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// POST / — create (admin)
+router.post("/", requireRole("admin"), async (req, res) => {
+  try {
+    const { name, start_time, end_time } = req.body;
+    if (!name || !start_time || !end_time) {
+      return res.status(400).json({ error: "name, start_time, end_time required" });
+    }
+    const created = await prisma.shift.create({
+      data: { name, start_time: toTime(start_time), end_time: toTime(end_time) },
+    });
+    res.status(201).json({ message: "Shift created", data: created });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// PUT /:id — update (admin)
+router.put("/:id", requireRole("admin"), async (req, res) => {
+  try {
+    const { name, start_time, end_time, active } = req.body;
+    const updated = await prisma.shift.update({
+      where: { id: req.params.id },
+      data: {
+        ...(name != null && { name }),
+        ...(start_time != null && { start_time: toTime(start_time) }),
+        ...(end_time != null && { end_time: toTime(end_time) }),
+        ...(active != null && { active }),
+        updated_at: new Date(),
+      },
+    });
+    res.status(200).json({ message: "Shift updated", data: updated });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// DELETE /:id — admin, blocked if workers assigned
+router.delete("/:id", requireRole("admin"), async (req, res) => {
+  try {
+    const assigned = await prisma.users.count({ where: { shift_id: req.params.id, deletedAt: null } });
+    if (assigned > 0) {
+      return res.status(409).json({ error: `Cannot delete: ${assigned} worker(s) assigned` });
+    }
+    await prisma.shift.delete({ where: { id: req.params.id } });
+    res.status(200).json({ message: "Shift deleted" });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+module.exports = router;
