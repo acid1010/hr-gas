@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { LayoutDashboard, Users, TrendingUp, Clock, CalendarClock, Fingerprint, LogOut, Sun, Moon, Search } from "lucide-react";
@@ -56,11 +57,8 @@ export default function Sidebar({ user }) {
         style={{ borderBottom: `1px solid ${border}` }}
       >
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white shrink-0"
-            style={{ background: "#3b6fd4", boxShadow: "0 0 18px rgba(59,111,212,0.38)" }}
-          >
-            GAS
+          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0" style={{ boxShadow: "0 0 18px rgba(59,111,212,0.38)" }}>
+            <Image src="/logo.png" alt="PT GAS" width={40} height={40} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
           </div>
           <div>
             <p className="text-xs font-black tracking-widest uppercase leading-tight" style={{ color: textColor }}>
