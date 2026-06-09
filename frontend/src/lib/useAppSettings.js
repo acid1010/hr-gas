@@ -4,7 +4,7 @@ import { useLang } from "@/app/components/AppProviders";
 import { t as translate } from "./i18n";
 
 export function useAppSettings() {
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const { lang } = useLang();
 
   const t = (path) => translate(lang, path);
@@ -26,5 +26,5 @@ export function useAppSettings() {
     primary: "#3b6fd4",
   };
 
-  return { isDark, lang, t, p };
+  return { isDark, lang, t, p, toggleTheme };
 }
