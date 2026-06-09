@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
-import Image from "next/image";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
@@ -324,7 +323,8 @@ export default function Display() {
 
         <div className="flex items-center gap-4">
           <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0" style={{ boxShadow: "0 0 20px rgba(59,111,212,0.4)" }}>
-            <Image src="/logo.png" alt="PT GAS" width={44} height={44} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="PT GAS" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
           </div>
           <div>
             <p className="text-sm font-black tracking-widest uppercase" style={{ color: C.text }}>PT. Global Anugerah Setia</p>
