@@ -1,322 +1,301 @@
-# HR System — PT. Global Anugerah Setia
+# HR System
 
-Internal HR management portal for PT. Global Anugerah Setia.
+Internal HR management system for PT. Global Anugerah Setia.
 
-- **Frontend** — Next.js 16, Tailwind CSS, DaisyUI — runs on port **3040**
-- **Backend** — Express 5, Prisma, PostgreSQL, Redis — runs on port **3041**
+The active application is split into two apps:
 
----
+| App | Stack | Default Port |
+| --- | --- | --- |
+| Frontend | Next.js 16, React 19 | `3040` |
+| Backend | Express 5, Prisma, Node 20 | `3041` |
 
-## Quick Start
+Supporting services:
 
-There are two ways to run this system: **Manual** (recommended for development) or **Docker** (recommended for production).
+| Service | Purpose |
+| --- | --- |
+| PostgreSQL | Main database |
+| Redis | Backend startup dependency and session/cache support |
 
----
+## Quick Start With Docker
 
-## Option A — Manual Setup
+Docker is the recommended setup for running the full system.
 
-### Step 1 — Prerequisites
+### 1. Create Root Environment File
 
-Install these before continuing:
-
-- [Node.js v20+](https://nodejs.org)
-- PostgreSQL (database named `hr` must exist)
-- Redis
-
-Start Redis with Docker if you don't have it installed locally:
-
-```bash
-docker run -d --name hr-redis -p 6379:6379 \
-  redis:7-alpine redis-server --requirepass "yourpassword"
-```
-
----
-
-### Step 2 — Backend
-
-#### 2a. Create the environment file
+Create `.env` in the project root:
 
 ```bash
-cd backend
 cp .env.example .env
 ```
 
-Open `backend/.env` and fill in your values:
+If `.env.example` is not present, create `.env` manually:
 
 ```env
-DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/hr?sslmode=disable"
-PORT=3041
-JWT_SECRET="any-long-random-string"
-JWT_REFRESH="another-long-random-string"
-REDIS_URL="redis://:yourpassword@127.0.0.1:6379"
+POSTGRES_PASSWORD=changeme
+REDIS_PASSWORD=changeme
+JWT_SECRET=change-this-to-a-random-secret
+JWT_REFRESH=change-this-to-another-random-secret
+API_URL=http://localhost:3041
 ZK_IP=192.128.69.33
 ZK_PORT=4370
 ```
 
-> `JWT_SECRET` and `JWT_REFRESH` can be any random string. Keep them secret and consistent.
-
-#### 2b. Install dependencies and generate Prisma client
-
-```bash
-npm install
-npx prisma generate
-```
-
-#### 2c. Run the database migration
-
-Run this once to create the `attendance` table:
-
-```bash
-psql "$DATABASE_URL" -f prisma/migrations/20260605_add_attendance/migration.sql
-```
-
-If `psql` is not in your PATH, open the file and run the SQL manually in your PostgreSQL client.
-
-#### 2d. Create the first admin user
-
-No default users exist. Run this once:
-
-```bash
-node -e "
-const prisma = require('./libs/prisma');
-const bcrypt = require('bcrypt');
-bcrypt.hash('yourpassword', 10).then(hash =>
-  prisma.users.create({ data: {
-    name: 'Administrator',
-    username: 'admin',
-    hash,
-    role: 'admin',
-    access: 'superadmin',
-    status: 'aktif',
-  }}).then(u => { console.log('Created:', u.username); process.exit(); })
-);
-"
-```
-
-#### 2e. Start the backend
-
-```bash
-PORT=3041 node src/index.js
-```
-
-Or with PM2 for persistent background running:
-
-```bash
-npm install -g pm2
-pm2 start src/index.js --name backend-hr -- --port 3041
-pm2 save
-```
-
-The backend is ready when you see:
-```
-Redis connected successfully
-Server is running on port 3041
-```
-
----
-
-### Step 3 — Frontend
-
-#### 3a. Create the environment file
-
-```bash
-cd frontend
-cp .env.example .env.local
-```
-
-Open `frontend/.env.local` and set:
+For production or LAN access, set `API_URL` to the backend URL that the browser can reach, for example:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL_PRODUCTION=http://localhost:3041
-JWT_SECRET="any-long-random-string"
+API_URL=http://192.168.1.50:3041
 ```
 
-> `JWT_SECRET` must be the **same value** as in `backend/.env`.
-
-#### 3b. Install dependencies
-
-```bash
-npm install
-```
-
-#### 3c. Start the frontend
-
-Development mode (with hot reload):
-
-```bash
-npm run dev
-```
-
-Production mode:
-
-```bash
-npm run build
-npm start
-```
-
-The frontend is ready when you see:
-```
-Ready on http://localhost:3040
-```
-
----
-
-### Step 4 — Open the app
-
-Go to **http://localhost:3040/login** and sign in with the admin credentials you created in Step 2d.
-
----
-
-## Option B — Docker (All-in-One)
-
-Runs PostgreSQL, Redis, backend, and frontend in containers.
-
-### Step 1 — Create environment files
-
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
-```
-
-Edit `backend/.env` — at minimum set:
-- `JWT_SECRET`
-- `JWT_REFRESH`
-- `POSTGRES_PASSWORD` (also set this in docker-compose.yml or via `.env` in the root)
-
-Edit `frontend/.env.local` — set `JWT_SECRET` to match the backend.
-
-### Step 2 — Build and start
+### 2. Build And Start
 
 ```bash
 docker compose up -d --build
 ```
 
-Services started:
-| Container | Port |
-|-----------|------|
-| hr-postgres | 5432 |
-| hr-redis | 6379 |
-| hr-backend | 3041 |
-| hr-frontend | 3040 |
-
-### Step 3 — Run the migration
-
-Run once after the first boot:
+Check containers:
 
 ```bash
-docker exec -i hr-postgres psql -U postgres -d hr \
-  < backend/prisma/migrations/20260605_add_attendance/migration.sql
+docker compose ps
 ```
 
-### Step 4 — Create admin user
+Expected containers:
+
+| Container | Purpose |
+| --- | --- |
+| `hr-postgres` | PostgreSQL |
+| `hr-redis` | Redis |
+| `hr-backend` | Express API |
+| `hr-frontend` | Next.js app |
+
+### 3. Apply Database Migrations
+
+Run migrations after the first database startup:
 
 ```bash
-docker exec hr-backend node -e "
-const prisma = require('./libs/prisma');
-const bcrypt = require('bcrypt');
-bcrypt.hash('yourpassword', 10).then(hash =>
-  prisma.users.create({ data: {
-    name: 'Administrator',
-    username: 'admin',
-    hash,
-    role: 'admin',
-    access: 'superadmin',
-    status: 'aktif',
-  }}).then(u => { console.log('Created:', u.username); process.exit(); })
-);
-"
+docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260605_add_attendance/migration.sql
+docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260607_overtime_module/migration.sql
+docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260608_shift_calendar/migration.sql
 ```
 
-### Step 5 — Open the app
+Warning: `20260607_overtime_module` drops old legacy overtime tables before creating the newer overtime request tables. Review it first if the database already contains real overtime data.
 
-Go to **http://localhost:3040/login**.
+### 4. Open The App
 
----
+Frontend:
 
-## TV Display
+```text
+http://localhost:3040/login
+```
 
-Open **http://your-server:3040/display** in a browser — no login required.
+Public display screen, no login required:
 
-Shows the monthly employee performance leaderboard (top 5 and bottom 5), auto-refreshing every 5 minutes. Best for a large screen in the production floor or office.
+```text
+http://localhost:3040/display
+```
 
----
+Backend API:
 
-## Fingerprint Device (ZKTeco X100-C)
+```text
+http://localhost:3041
+```
 
-The fingerprint machine must be on the **same local network** as the backend server.
+`GET /auth/me` returns `401 Unauthorized` when no login cookie is present; that is normal.
 
-| Setting | Value |
-|---------|-------|
-| Device IP | `192.128.69.33` |
-| TCP Port | `4370` |
+## Default Login
 
-Before syncing, each employee must be enrolled on the device with their **NIK as their User ID** — this is how punch records are matched to database records.
+Fresh Docker databases are seeded from `init.sql`.
 
-To sync: open the **Attendance** page → click **Sync Device**.
+| Field | Value |
+| --- | --- |
+| Username | `mdata` |
+| Password | `gasjaya` |
 
-To change the device IP/port, update `ZK_IP` and `ZK_PORT` in `backend/.env`.
+If your database volume existed before the seed was added, create an admin user manually or reset the database volume.
 
----
+## Daily Docker Commands
+
+Start existing containers:
+
+```bash
+docker compose up -d
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Rebuild after code or environment changes:
+
+```bash
+docker compose up -d --build
+```
+
+View logs:
+
+```bash
+docker logs hr-backend
+docker logs hr-frontend
+```
+
+Follow backend and frontend logs:
+
+```bash
+docker compose logs -f backend frontend
+```
+
+Reset all Docker data, including the database:
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+After a reset, apply migrations again.
+
+## Manual Development Setup
+
+Use manual setup only when developing without Docker.
+
+### Backend
+
+Start PostgreSQL and Redis locally, then:
+
+```bash
+cd backend
+cp .env.example .env
+npm install
+npx prisma generate
+PORT=3041 node src/index.js
+```
+
+Backend `.env` example:
+
+```env
+DATABASE_URL="postgresql://postgres:changeme@localhost:5432/hr?sslmode=disable"
+PORT=3041
+JWT_SECRET="change-this-to-a-random-secret"
+JWT_REFRESH="change-this-to-another-random-secret"
+REDIS_URL="redis://:changeme@127.0.0.1:6379"
+ZK_IP=192.128.69.33
+ZK_PORT=4370
+```
+
+Run backend tests:
+
+```bash
+cd backend
+npm test
+```
+
+### Frontend
+
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Frontend `.env.local` example:
+
+```env
+NEXT_PUBLIC_API_BASE_URL_PRODUCTION=http://localhost:3041
+JWT_SECRET="change-this-to-a-random-secret"
+```
+
+Build frontend:
+
+```bash
+cd frontend
+npm run build
+```
+
+Lint frontend:
+
+```bash
+cd frontend
+npm run lint
+```
+
+## Important Notes
+
+Active code lives in `backend/` and `frontend/`.
+
+Prisma client output is generated into `backend/src/generated/prisma`. Import Prisma through `backend/libs/prisma.js`, not directly from `@prisma/client`.
+
+Schema changes use raw SQL migrations under `backend/prisma/migrations/`. After schema changes, run:
+
+```bash
+cd backend
+npx prisma generate
+```
+
+The `/display` route is intended for TV screens and is accessible without authentication. It uses the public backend endpoint `GET /api/performance/leaderboard`.
 
 ## Troubleshooting
 
-**`Server is running on port undefined`**
-→ You forgot to set `PORT`. Run: `PORT=3041 node src/index.js`
+### Frontend Calls The Wrong Backend URL
 
-**`Redis connection refused`**
-→ Redis is not running. Start it: `docker start hr-redis`
+`NEXT_PUBLIC_*` values are baked into the frontend image at build time. Update `API_URL` in `.env`, then rebuild the frontend:
 
-**Login fails with correct credentials**
-→ Check that `JWT_SECRET` is identical in both `backend/.env` and `frontend/.env.local`
-→ Check that `NEXT_PUBLIC_API_BASE_URL_PRODUCTION` points to the running backend
-
-**Device shows Offline**
-→ Backend and device must be on the same subnet
-→ Test: `ping 192.128.69.33` and `nc -zv 192.128.69.33 4370`
-
-**Attendance shows "Unregistered"**
-→ The employee's User ID on the device does not match their NIK in the database
-→ Re-enroll the employee on the device using their exact NIK as the User ID
-
-**PM2 logs**
 ```bash
-pm2 logs backend-hr
-pm2 restart backend-hr --update-env
+docker compose build frontend
+docker compose up -d frontend
 ```
 
----
+### Missing `public.holiday` Table
 
-## Field Reference
+Apply the shift calendar migration:
 
-| Field | Valid values |
-|-------|-------------|
-| `status` | `aktif` / `non-aktif` |
-| `worker_stats` | `pkwt` / `borongan` / `magang` |
-| `section` | `manager` / `spv` / `admin` / `operator` |
-| `departement` | `production` / `engineering` / `qc` / `maintenance` / `warehouse` / `hr` / `ga` / `it` |
-| `access` | `-` / `user` / `admin` / `superadmin` |
+```bash
+docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260608_shift_calendar/migration.sql
+```
 
----
+If other module tables are missing, apply all migrations in order from the Docker setup section.
 
-## API Reference
+### Redis Connection Fails
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/login` | Sign in |
-| POST | `/auth/logout` | Sign out |
-| POST | `/auth/refresh_token` | Refresh access token |
-| GET | `/members` | List employees |
-| POST | `/members` | Create employee |
-| PUT | `/members/:id` | Update employee |
-| PATCH | `/members/delete/:id` | Soft-delete employee |
-| GET | `/members/export` | Download employees as CSV |
-| POST | `/members/import` | Bulk import from CSV |
-| GET | `/api/performance` | List performance records |
-| POST | `/api/performance/post` | Add performance record |
-| DELETE | `/api/performance/delete/:id` | Delete performance record |
-| GET | `/api/performance/leaderboard?month=YYYY-MM` | Combined score ranking |
-| GET | `/api/attendance?date=YYYY-MM-DD` | List attendance logs |
-| POST | `/api/attendance/sync` | Pull records from ZKTeco device |
-| GET | `/api/attendance/summary?month=YYYY-MM` | Days-present per employee |
-| GET | `/api/attendance/device/info` | Check device connectivity |
-| GET | `/api/attendance/report/excel?month=YYYY-MM` | Download monthly report as .xlsx |
+Check that `hr-redis` is running:
+
+```bash
+docker compose ps redis
+docker logs hr-redis
+```
+
+Make sure `REDIS_PASSWORD` in root `.env` matches the backend connection string used by Docker Compose.
+
+### Public Display Logo Does Not Load
+
+Make sure the frontend image is rebuilt from the latest code:
+
+```bash
+docker compose build frontend
+docker compose up -d frontend
+```
+
+The logo file should be available at:
+
+```text
+http://localhost:3040/logo.png
+```
+
+## Production Checklist
+
+Generate strong secrets:
+
+```bash
+openssl rand -hex 32
+```
+
+Set strong values for:
+
+```env
+JWT_SECRET=...
+JWT_REFRESH=...
+POSTGRES_PASSWORD=...
+REDIS_PASSWORD=...
+```
+
+Set `API_URL` to a backend URL reachable by user browsers. Do not use `localhost` for production clients unless the browser runs on the same machine as the backend.
