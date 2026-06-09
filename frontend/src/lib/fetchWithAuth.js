@@ -66,7 +66,9 @@ const fetchWithAuth = async (url, option = {}) => {
 
     if (!res.ok) {
       const errorData = await res.json();
-      return Promise.reject(errorData);
+      const err = new Error(errorData.message || errorData.error || "Terjadi kesalahan");
+      err.data = errorData;
+      return Promise.reject(err);
     }
 
     return await res.json();
