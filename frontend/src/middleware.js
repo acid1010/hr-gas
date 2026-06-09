@@ -10,6 +10,10 @@ export function middleware(request) {
     return NextResponse.next({ request: { headers: reqHeaders } });
   }
 
+  if (pathname === "/logo.png" || pathname.startsWith("/icons/")) {
+    return NextResponse.next({ request: { headers: reqHeaders } });
+  }
+
   const token = request.cookies.get("accessToken");
   const isAuthPage = pathname.startsWith("/login");
 
