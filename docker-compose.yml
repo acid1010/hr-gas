@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -12,16 +10,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      - "5432:5432"
 
   redis:
     image: redis:7-alpine
     container_name: hr-redis
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
-    ports:
-      - "6379:6379"
 
   backend:
     build:
@@ -48,13 +42,15 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE_URL_PRODUCTION: ${API_URL}
+        NEXT_PUBLIC_API_BASE_URL_PRODUCTION: ${API_URL:-http://localhost:3041}
     container_name: hr-frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
       JWT_SECRET: ${JWT_SECRET}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
     ports:
       - "3040:3000"
 
