@@ -58,6 +58,8 @@ router.post("/", async (req, res) => {
     const assyData = {
       ...handleData,
       join_date: handleData.join_date ? new Date(handleData.join_date) : null,
+      shift_id: handleData.shift_id || null,
+      link_image: handleData.link_image || null,
     };
     console.log(handleData);
     const checkNik = await prisma.users.findMany({
@@ -110,7 +112,7 @@ router.put("/:id", async (req, res) => {
         section,
         status,
         worker_stats,
-        link_image,
+        link_image: link_image || null,
         join_date: join_date ? new Date(join_date) : undefined,
         shift_id: shift_id !== undefined ? (shift_id || null) : undefined,
       },
