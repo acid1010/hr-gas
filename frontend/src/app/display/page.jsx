@@ -71,9 +71,9 @@ function getDrivePreview(url) {
 }
 
 const RANK_META = [
-  { color: "#f59e0b", glow: "rgba(245,158,11,0.18)", label: "#1" },
-  { color: "#94a3b8", glow: "rgba(148,163,184,0.12)", label: "#2" },
-  { color: "#cd7f32", glow: "rgba(205,127,50,0.12)",  label: "#3" },
+  { color: "#ef4444", glow: "rgba(239,68,68,0.18)", label: "#1" },
+  { color: "#f97316", glow: "rgba(249,115,22,0.12)", label: "#2" },
+  { color: "#f59e0b", glow: "rgba(245,158,11,0.12)", label: "#3" },
 ];
 
 function useClock() {
@@ -136,8 +136,8 @@ function SpotlightCard({ emp, rank = 1, C }) {
             {meta.label}
           </span>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full" style={{ background: "#22c55e", boxShadow: "0 0 8px #22c55e", animation: "glow-pulse 2s ease-in-out infinite" }} />
-            <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#22c55e" }}>Live</span>
+            <span className="w-2 h-2 rounded-full" style={{ background: "#ef4444", boxShadow: "0 0 8px #ef4444", animation: "glow-pulse 2s ease-in-out infinite" }} />
+            <span className="text-xs font-black tracking-widest uppercase" style={{ color: "#ef4444" }}>Live</span>
           </div>
         </div>
 
@@ -304,10 +304,11 @@ export default function Display() {
   }, [load]);
 
   const monthLabel = new Date(month + "-01").toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-  const leader   = data[0] || null;
-  const runner1  = data[1] || null;
-  const runner2  = data[2] || null;
-  const restList = data.slice(3);
+  const sorted  = [...data].reverse();
+  const leader   = sorted[0] || null;
+  const runner1  = sorted[1] || null;
+  const runner2  = sorted[2] || null;
+  const restList = sorted.slice(3);
 
   return (
     <div
@@ -375,8 +376,8 @@ export default function Display() {
 
         {/* LEFT — Spotlight podium */}
         <div className="flex flex-col gap-3 p-6 overflow-hidden" style={{ width: "38%", borderRight: `1px solid ${C.divider}` }}>
-          <p className="text-[10px] font-black tracking-[0.28em] uppercase mb-1" style={{ color: "#f59e0b" }}>
-            Top Performers
+          <p className="text-[10px] font-black tracking-[0.28em] uppercase mb-1" style={{ color: "#ef4444" }}>
+            Perlu Perhatian
           </p>
 
           <AnimatePresence mode="wait">
@@ -434,17 +435,17 @@ export default function Display() {
 
         {/* RIGHT — Full leaderboard */}
         <div className="flex-1 flex flex-col overflow-hidden p-6">
-          <p className="text-[10px] font-black tracking-[0.28em] uppercase mb-3 shrink-0" style={{ color: "#5b8df8" }}>
-            Semua Peringkat
+          <p className="text-[10px] font-black tracking-[0.28em] uppercase mb-3 shrink-0" style={{ color: "#ef4444" }}>
+            Semua Peringkat Bawah
           </p>
 
           <div className="flex-1 overflow-y-auto flex flex-col gap-2" style={{ scrollbarWidth: "none" }}>
             <AnimatePresence>
-              {data.map((emp, i) => (
+              {sorted.map((emp, i) => (
                 <RankRow key={emp.user_id} emp={emp} rank={i + 1} index={i} C={C} />
               ))}
             </AnimatePresence>
-            {loaded && data.length === 0 && (
+            {loaded && sorted.length === 0 && (
               <div className="flex-1 flex items-center justify-center" style={{ color: C.muted, fontSize: "0.875rem" }}>
                 Belum ada data untuk bulan ini
               </div>
