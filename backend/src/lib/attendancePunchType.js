@@ -40,8 +40,11 @@ function classifyByShift(punchTime, shift) {
 }
 
 function classifyByFallback(punchTime, firstPunch) {
+  // No prior punch today = first punch of day = always check-in
+  if (!firstPunch) return 0;
+
   const duplicateWindowMs = 2 * 60 * 60 * 1000;
-  if (firstPunch && punchTime - firstPunch.punch_time <= duplicateWindowMs) {
+  if (punchTime - firstPunch.punch_time <= duplicateWindowMs) {
     return firstPunch.punch_type ?? 0;
   }
 
