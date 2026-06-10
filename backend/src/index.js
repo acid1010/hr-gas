@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
+const path = require("path");
 const redis = require("./config/redis");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -43,9 +44,10 @@ const optionsCors = {
 };
 
 app.use(cors(optionsCors));
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ limit: "5mb", extended: true }));
 app.use(cookieParser());
+app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
 // Auth routes are public (login/refresh must work without a valid access token)
 app.use("/auth", authRoutes);

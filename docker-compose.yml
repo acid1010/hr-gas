@@ -40,6 +40,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:-changeme}@redis:6379
       ZK_IP: ${ZK_IP:-192.128.69.33}
       ZK_PORT: ${ZK_PORT:-4370}
+      TZ: Asia/Jakarta
     ports:
       - "3041:3041"
 

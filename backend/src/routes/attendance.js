@@ -4,6 +4,7 @@ const prisma = require("../../libs/prisma");
 const ZKLib = require("node-zklib");
 const ExcelJS = require("exceljs");
 const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
+const zkRealtime = require("../lib/zkRealtime");
 
 const DEVICE_IP = process.env.ZK_IP || "192.128.69.33";
 const DEVICE_PORT = parseInt(process.env.ZK_PORT || "4370");
@@ -70,6 +71,17 @@ router.post("/sync", async (req, res) => {
     if (zk) { try { await zk.disconnect(); } catch {} }
     res.status(500).json({ message: "Device sync failed", error: error.message });
   }
+});
+
+// GET /attendance/realtime — SSE live punch feed
+router.get("/realtime", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  zkRealtime.addClient(res);
+  req.on("close", () => zkRealtime.removeClient(res));
 });
 
 // GET /attendance?date=YYYY-MM-DD&user_id=...&page=1&limit=50
@@ -234,6 +246,57 @@ router.get("/report/excel", async (req, res) => {
     res.status(200).send(buf);
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+// GET /attendance/device/users — enrolled device users cross-referenced with DB
+router.get("/device/users", async (req, res) => {
+  let zk = null;
+  try {
+    zk = new ZKLib(DEVICE_IP, DEVICE_PORT, DEVICE_TIMEOUT, DEVICE_INPORT);
+    await zk.createSocket();
+    const { data: deviceUsers } = await zk.getUsers();
+    await zk.disconnect();
+
+    const dbEmployees = await prisma.users.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true, nik: true, departement: true, section: true },
+    });
+
+    const dbByNik = {};
+    for (const emp of dbEmployees) {
+      dbByNik[String(emp.nik)] = emp;
+    }
+
+    const deviceNiks = new Set();
+    const matched = [];
+    const unregistered = [];
+
+    for (const du of deviceUsers) {
+      const nik = String(du.userId).trim();
+      deviceNiks.add(nik);
+      const dbUser = dbByNik[nik];
+      if (dbUser) {
+        matched.push({ device: du, db: dbUser });
+      } else {
+        unregistered.push({ device: du });
+      }
+    }
+
+    const notOnDevice = dbEmployees
+      .filter((emp) => !deviceNiks.has(String(emp.nik)))
+      .map((emp) => ({ db: emp }));
+
+    res.status(200).json({
+      total_device: deviceUsers.length,
+      total_db: dbEmployees.length,
+      matched,
+      unregistered,
+      notOnDevice,
+    });
+  } catch (error) {
+    if (zk) { try { await zk.disconnect(); } catch {} }
+    res.status(500).json({ message: "Failed to fetch device users", error: error.message });
   }
 });
 

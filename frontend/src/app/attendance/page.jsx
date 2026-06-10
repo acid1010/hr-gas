@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
-import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet, Activity, Users, Clock } from "lucide-react";
+import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet, Activity, Users, Clock, Fingerprint, X, CheckCircle, AlertCircle, UserX, UserPlus } from "lucide-react";
+import EmployeeForm from "@/app/components/forms/EmployeeForm";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { toast } from "@/lib/toast";
 import { SkeletonTable } from "@/app/components/SkeletonRow";
@@ -72,12 +73,21 @@ export default function Attendance() {
   const [date,        setDate]        = useState(today);
   const [syncing,     setSyncing]     = useState(false);
   const [deviceStatus,setDeviceStatus]= useState(null);
-    const [loading,     setLoading]     = useState(false);
+  const [loading,     setLoading]     = useState(false);
   const [lastSynced,  setLastSynced]  = useState(null);
   const [nameFilter,      setNameFilter]      = useState("");
   const [punchTypeFilter, setPunchTypeFilter] = useState(null);
   const [deptFilter,      setDeptFilter]      = useState("");
+  const [liveConnected,   setLiveConnected]   = useState(false);
+  const [deviceUsersOpen,  setDeviceUsersOpen]  = useState(false);
+  const [deviceUsersData,  setDeviceUsersData]  = useState(null);
+  const [deviceUsersTab,   setDeviceUsersTab]   = useState("matched");
+  const [deviceUsersLoading, setDeviceUsersLoading] = useState(false);
+  const [importForm,   setImportForm]   = useState(null);
+  const [importSaving, setImportSaving] = useState(false);
   const autoSyncRef = useRef(null);
+  const dateRef = useRef(date);
+  useEffect(() => { dateRef.current = date; }, [date]);
 
   const punchLabel = (type) => {
     if (type === 0) return { label: t("attendance.checkIn"),  color: "#22c55e" };
@@ -129,6 +139,116 @@ export default function Attendance() {
     return () => clearInterval(autoSyncRef.current);
   }, []);
 
+  useEffect(() => {
+    const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime`, { withCredentials: true });
+
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === "status") {
+          setLiveConnected(msg.connected);
+          if (msg.connected) setDeviceStatus(true);
+        } else if (msg.type === "punch") {
+          const punchDate = msg.punch_time.slice(0, 10);
+          if (punchDate !== dateRef.current) return;
+          const newRecord = {
+            id: `live-${msg.device_uid}-${msg.punch_time}`,
+            device_uid: msg.device_uid,
+            punch_time: msg.punch_time,
+            punch_type: msg.punch_type,
+            user_id: msg.user?.id ?? null,
+            users: msg.user,
+          };
+          setRecords((prev) => [newRecord, ...prev]);
+          setTotal((prev) => prev + 1);
+          setLastSynced(new Date());
+        }
+      } catch {}
+    };
+
+    es.onerror = () => setLiveConnected(false);
+
+    return () => es.close();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openDeviceUsers = async () => {
+    setDeviceUsersOpen(true);
+    setDeviceUsersLoading(true);
+    try {
+      const res = await fetchWithAuth(`${apiBaseUrl}/api/attendance/device/users`);
+      setDeviceUsersData(res);
+      setDeviceUsersTab("matched");
+    } catch (err) {
+      toast(err.message, "error");
+      setDeviceUsersOpen(false);
+    } finally {
+      setDeviceUsersLoading(false);
+    }
+  };
+
+  const [importAllSaving, setImportAllSaving] = useState(false);
+
+  const importAllFromDevice = async () => {
+    if (!deviceUsersData?.unregistered?.length) return;
+    setImportAllSaving(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const payload = deviceUsersData.unregistered.map((row) => ({
+      nik: row.device.userId || "",
+      name: row.device.name || "",
+      join_date: today,
+      status: "aktif",
+    }));
+    try {
+      const res = await fetchWithAuth(`${apiBaseUrl}/members/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      toast(`${res.created} pegawai ditambahkan${res.skipped ? `, ${res.skipped} dilewati` : ""}`, "success");
+      const fresh = await fetchWithAuth(`${apiBaseUrl}/api/attendance/device/users`);
+      setDeviceUsersData(fresh);
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      setImportAllSaving(false);
+    }
+  };
+
+  const openImportForm = (deviceUser) => {
+    setImportForm({
+      nik: deviceUser.userId || "",
+      name: deviceUser.name || "",
+      join_date: new Date().toISOString().slice(0, 10),
+      status: "aktif",
+      departement: "",
+      section: "",
+      worker_stats: "",
+      shift_id: "",
+      link_image: "",
+    });
+  };
+
+  const saveImportForm = async () => {
+    if (!importForm?.nik || !importForm?.name) {
+      toast("NIK dan nama wajib diisi", "error");
+      return;
+    }
+    setImportSaving(true);
+    try {
+      await fetchWithAuth(`${apiBaseUrl}/members`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(importForm) });
+      toast(`${importForm.name} berhasil ditambahkan`, "success");
+      setImportForm(null);
+      // Refresh device users list to move row out of unregistered
+      const res = await fetchWithAuth(`${apiBaseUrl}/api/attendance/device/users`);
+      setDeviceUsersData(res);
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      setImportSaving(false);
+    }
+  };
+
   const filteredRecords = records.filter(r => {
     if (punchTypeFilter !== null && r.punch_type !== punchTypeFilter) return false;
     if (deptFilter && (r.users?.departement || "").toLowerCase() !== deptFilter) return false;
@@ -178,6 +298,7 @@ export default function Attendance() {
   ];
 
   return (
+    <>
     <main className="overflow-x-hidden w-full max-w-full">
       <div className="p-8 min-h-screen transition-colors duration-300" style={{ background: p.pageBg }}>
 
@@ -210,6 +331,16 @@ export default function Attendance() {
               {deviceStatus === false && <><WifiOff size={13} style={{ color: "#ef4444" }} /><span style={{ color: "#ef4444" }}>{t("attendance.deviceOffline")}</span></>}
               {deviceStatus === null  && <span style={{ color: p.faint }}>{t("attendance.checking")}</span>}
             </div>
+
+            {liveConnected && (
+              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black" style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.25)", color: "#22c55e" }}>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: "#22c55e" }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: "#22c55e" }} />
+                </span>
+                LIVE
+              </div>
+            )}
 
             <motion.button
               onClick={() => doSync(false)}
@@ -343,6 +474,15 @@ export default function Attendance() {
               onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; e.currentTarget.style.color = p.muted; }}
             >
               <FileSpreadsheet size={14} /> {t("attendance.monthlyReport")}
+            </button>
+            <button
+              onClick={openDeviceUsers}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{ background: p.inputBg, border: `1px solid ${p.border2}`, color: p.muted }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(91,141,248,0.4)"; e.currentTarget.style.color = p.text; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = p.border2; e.currentTarget.style.color = p.muted; }}
+            >
+              <Fingerprint size={14} /> Pegawai Perangkat
             </button>
           </div>
           <div className="flex items-center gap-2 mt-2 w-full xl:mt-0 xl:w-auto xl:ml-auto flex-wrap">
@@ -600,5 +740,228 @@ export default function Attendance() {
         )}
       </div>
     </main>
+
+    {/* DEVICE USERS DRAWER */}
+    <AnimatePresence>
+      {deviceUsersOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40"
+            style={{ background: "rgba(0,0,0,0.45)" }}
+            onClick={() => setDeviceUsersOpen(false)}
+          />
+          <motion.aside
+            initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="fixed right-0 top-0 bottom-0 z-50 flex flex-col overflow-hidden w-full max-w-2xl"
+            style={{ background: p.cardBg, borderLeft: `1px solid ${p.border}` }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: `1px solid ${p.border}` }}>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.primary }}>Perangkat Sidik Jari</p>
+                <h2 className="mt-1 text-lg font-black" style={{ color: p.text }}>Data Pegawai Terdaftar</h2>
+              </div>
+              <button onClick={() => setDeviceUsersOpen(false)} className="rounded-xl p-2 transition" style={{ color: p.muted }} onMouseEnter={e => e.currentTarget.style.color = p.text} onMouseLeave={e => e.currentTarget.style.color = p.muted}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {deviceUsersLoading ? (
+              <div className="flex flex-1 items-center justify-center">
+                <div className="text-sm font-bold animate-pulse" style={{ color: p.muted }}>Menghubungi perangkat…</div>
+              </div>
+            ) : deviceUsersData ? (
+              <>
+                {/* Summary chips */}
+                <div className="grid grid-cols-3 gap-3 px-6 py-4" style={{ borderBottom: `1px solid ${p.border}` }}>
+                  {[
+                    { label: "Cocok", count: deviceUsersData.matched.length,      icon: CheckCircle, color: "#22c55e" },
+                    { label: "Tidak di DB",  count: deviceUsersData.unregistered.length, icon: AlertCircle, color: "#f59e0b" },
+                    { label: "Tidak di Perangkat",  count: deviceUsersData.notOnDevice.length,  icon: UserX,       color: "#ef4444" },
+                  ].map(({ label, count, icon: Icon, color }) => (
+                    <div key={label} className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: `${color}10`, border: `1px solid ${color}25` }}>
+                      <Icon size={16} style={{ color }} />
+                      <div>
+                        <p className="text-xl font-black leading-none" style={{ color }}>{count}</p>
+                        <p className="text-[10px] font-bold mt-0.5" style={{ color }}>{label}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tabs + bulk action */}
+                <div className="flex items-center justify-between gap-2 px-6 pt-4 pb-2">
+                <div className="flex gap-1">
+                  {[
+                    { key: "matched",      label: `Cocok (${deviceUsersData.matched.length})` },
+                    { key: "unregistered", label: `Tidak di DB (${deviceUsersData.unregistered.length})` },
+                    { key: "notOnDevice",  label: `Tidak di Perangkat (${deviceUsersData.notOnDevice.length})` },
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setDeviceUsersTab(tab.key)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-black transition-all"
+                      style={{
+                        background: deviceUsersTab === tab.key ? "#3b6fd4" : p.inputBg,
+                        color: deviceUsersTab === tab.key ? "#fff" : p.faint,
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                {deviceUsersTab === "unregistered" && deviceUsersData.unregistered.length > 0 && (
+                  <button
+                    onClick={importAllFromDevice}
+                    disabled={importAllSaving}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black shrink-0 transition-all"
+                    style={{ background: importAllSaving ? p.inputBg : "#3b6fd4", color: "#fff", cursor: importAllSaving ? "not-allowed" : "pointer" }}
+                  >
+                    {importAllSaving
+                      ? <><span className="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" /> Menyimpan…</>
+                      : <><UserPlus size={12} /> Tambah Semua ({deviceUsersData.unregistered.length})</>}
+                  </button>
+                )}
+                </div>
+
+                {/* Table */}
+                <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ scrollbarWidth: "none" }}>
+                  <table className="w-full text-sm mt-2">
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${p.border}` }}>
+                        {deviceUsersTab === "matched" && (
+                          <>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>NIK / UID</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>Nama (Perangkat)</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>Nama (DB)</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>Departemen</th>
+                          </>
+                        )}
+                        {deviceUsersTab === "unregistered" && (
+                          <>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>UID Perangkat</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>Nama (Perangkat)</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>User ID</th>
+                            <th />
+                          </>
+                        )}
+                        {deviceUsersTab === "notOnDevice" && (
+                          <>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>NIK</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>Nama</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>Departemen</th>
+                            <th className="py-3 text-left text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: p.faint }}>Jabatan</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deviceUsersTab === "matched" && deviceUsersData.matched.map((row, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${p.border}` }}>
+                          <td className="py-3"><span className="font-mono text-[11px] font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(91,141,248,0.1)", color: "#5b8df8" }}>{row.db.nik}</span></td>
+                          <td className="py-3 text-xs" style={{ color: p.muted }}>{row.device.name || "—"}</td>
+                          <td className="py-3 text-xs font-semibold" style={{ color: p.text }}>{row.db.name}</td>
+                          <td className="py-3 text-xs" style={{ color: p.muted }}>{row.db.departement || "—"}</td>
+                        </tr>
+                      ))}
+                      {deviceUsersTab === "unregistered" && deviceUsersData.unregistered.map((row, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${p.border}` }}>
+                          <td className="py-3"><span className="font-mono text-[11px] font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}>{row.device.uid}</span></td>
+                          <td className="py-3 text-xs font-semibold" style={{ color: p.text }}>{row.device.name || "—"}</td>
+                          <td className="py-3 text-xs" style={{ color: p.muted }}>{row.device.userId || "—"}</td>
+                          <td className="py-3">
+                            <button
+                              onClick={() => openImportForm(row.device)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all"
+                              style={{ background: "rgba(91,141,248,0.12)", color: "#5b8df8", border: "1px solid rgba(91,141,248,0.25)" }}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(91,141,248,0.22)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "rgba(91,141,248,0.12)"}
+                            >
+                              <UserPlus size={12} /> Tambah
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {deviceUsersTab === "notOnDevice" && deviceUsersData.notOnDevice.map((row, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${p.border}` }}>
+                          <td className="py-3"><span className="font-mono text-[11px] font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>{String(row.db.nik)}</span></td>
+                          <td className="py-3 text-xs font-semibold" style={{ color: p.text }}>{row.db.name}</td>
+                          <td className="py-3 text-xs" style={{ color: p.muted }}>{row.db.departement || "—"}</td>
+                          <td className="py-3 text-xs" style={{ color: p.muted }}>{row.db.section || "—"}</td>
+                        </tr>
+                      ))}
+                      {deviceUsersData[deviceUsersTab]?.length === 0 && (
+                        <tr><td colSpan={4} className="py-10 text-center text-sm" style={{ color: p.faint }}>Tidak ada data</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : null}
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
+
+    {/* IMPORT FROM DEVICE MODAL */}
+    <AnimatePresence>
+      {importForm && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0" style={{ zIndex: 60 }}
+            style={{ background: "rgba(0,0,0,0.55)" }}
+            onClick={() => !importSaving && setImportForm(null)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 16 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-3xl overflow-hidden"
+            style={{ background: p.cardBg, border: `1px solid ${p.border}`, maxHeight: "90vh", zIndex: 61 }}
+          >
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: `1px solid ${p.border}` }}>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.primary }}>Dari Perangkat Sidik Jari</p>
+                <h2 className="mt-1 text-base font-black" style={{ color: p.text }}>Tambah Pegawai ke Database</h2>
+              </div>
+              <button disabled={importSaving} onClick={() => setImportForm(null)} className="rounded-xl p-2" style={{ color: p.muted }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-5" style={{ scrollbarWidth: "none" }}>
+              <EmployeeForm
+                formData={importForm}
+                onChange={(field, value) => setImportForm((prev) => ({ ...prev, [field]: value }))}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 px-6 py-4" style={{ borderTop: `1px solid ${p.border}` }}>
+              <button
+                disabled={importSaving}
+                onClick={() => setImportForm(null)}
+                className="px-4 py-2.5 rounded-xl text-sm font-bold"
+                style={{ background: p.inputBg, color: p.muted }}
+              >
+                Batal
+              </button>
+              <button
+                disabled={importSaving}
+                onClick={saveImportForm}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black text-white"
+                style={{ background: importSaving ? "#1e2d52" : "#3b6fd4", cursor: importSaving ? "not-allowed" : "pointer" }}
+              >
+                {importSaving ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" /> Menyimpan…</> : <><UserPlus size={14} /> Simpan Pegawai</>}
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   );
 }

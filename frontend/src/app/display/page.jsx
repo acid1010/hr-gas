@@ -1,26 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CalendarDays,
-  Factory,
-  Gauge,
-  Moon,
-  RotateCcw,
-  Sun,
-  TrendingDown,
-} from "lucide-react";
+import { CalendarDays, Moon, Signal, Sun } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
-
-const RANK_ACCENTS = [
-  { label: "01", color: "#ef4444", soft: "rgba(239,68,68,0.14)" },
-  { label: "02", color: "#f97316", soft: "rgba(249,115,22,0.13)" },
-  { label: "03", color: "#f59e0b", soft: "rgba(245,158,11,0.13)" },
-];
+const FOCUS_ROTATE_INTERVAL = 12 * 1000;
 
 const DEPT_COLORS = {
   production: "#3b6fd4",
@@ -50,78 +37,62 @@ function getScoreTone(score) {
   return "#dc2626";
 }
 
+
 function useClock() {
-  const [time, setTime] = useState({ h: "00", m: "00", s: "00" });
-  const [date, setDate] = useState("");
+  const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      setTime({
-        h: String(now.getHours()).padStart(2, "0"),
-        m: String(now.getMinutes()).padStart(2, "0"),
-        s: String(now.getSeconds()).padStart(2, "0"),
-      });
-      setDate(
-        now.toLocaleDateString("id-ID", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        }),
-      );
-    };
-
+    const tick = () => setNow(new Date());
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
 
-  return { time, date };
+  const time = {
+    h: String(now.getHours()).padStart(2, "0"),
+    m: String(now.getMinutes()).padStart(2, "0"),
+    s: String(now.getSeconds()).padStart(2, "0"),
+  };
+
+  const date = now.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthLabel = new Date(`${month}-01`).toLocaleDateString("id-ID", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return { time, date, month, monthLabel };
 }
 
-function useRefreshCountdown(intervalMs) {
-  const [secs, setSecs] = useState(Math.floor(intervalMs / 1000));
+function useRefreshCountdown(nextRefreshAt) {
+  const [remaining, setRemaining] = useState(() => Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000)));
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setSecs((current) => (current <= 1 ? Math.floor(intervalMs / 1000) : current - 1));
-    }, 1000);
+    const sync = () => setRemaining(Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000)));
+    sync();
+    const id = setInterval(sync, 1000);
     return () => clearInterval(id);
-  }, [intervalMs]);
+  }, [nextRefreshAt]);
 
-  return secs;
+  return remaining;
 }
 
-function AnimatedNumber({ value }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const target = Number(value) || 0;
-    let current = 0;
-    const step = Math.max(target / 34, 1);
-    const id = setInterval(() => {
-      current = Math.min(target, current + step);
-      if (ref.current) ref.current.textContent = String(Math.round(current));
-      if (current >= target) clearInterval(id);
-    }, 18);
-
-    return () => clearInterval(id);
-  }, [value]);
-
-  return <span ref={ref}>0</span>;
-}
-
-function Avatar({ employee, size = "md" }) {
+function Avatar({ employee, size = "lg" }) {
   const sizes = {
-    lg: "h-28 w-28 text-5xl",
-    md: "h-12 w-12 text-lg",
-    sm: "h-9 w-9 text-sm",
+    lg: "h-28 w-28 text-5xl rounded-2xl",
+    md: "h-14 w-14 text-xl rounded-xl",
+    sm: "h-11 w-11 text-base rounded-xl",
   };
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-lg ${sizes[size]}`}
+      className={`relative shrink-0 overflow-hidden ${sizes[size]}`}
       style={{ background: deptColor(employee?.departement) }}
     >
       <div className="absolute inset-0 flex items-center justify-center font-black text-white">
@@ -139,44 +110,42 @@ function Avatar({ employee, size = "md" }) {
   );
 }
 
-function MetricBlock({ label, value, tone, suffix = "" }) {
+function SoftStat({ label, value, helper, icon: Icon, p }) {
   return (
-    <div className="min-w-0">
-      <p className="mb-1 text-[10px] font-black uppercase tracking-[0.2em] opacity-60">{label}</p>
-      <p className="truncate text-2xl font-black tabular-nums" style={{ color: tone }}>
+    <div className="rounded-2xl border px-4 py-4" style={{ background: p.cardBg, borderColor: p.border }}>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
+          {label}
+        </p>
+        <Icon size={15} style={{ color: p.primary }} />
+      </div>
+      <p className="text-3xl font-black tabular-nums leading-none" style={{ color: p.text }}>
         {value}
-        {suffix}
+      </p>
+      <p className="mt-2 text-xs font-semibold" style={{ color: p.muted }}>
+        {helper}
       </p>
     </div>
   );
 }
 
-function StatusPill({ icon: Icon, label, value, p }) {
+function ScorePill({ label, value, tone }) {
   return (
-    <div
-      className="flex h-12 items-center gap-3 rounded-lg border px-4"
-      style={{ background: p.cardBg, borderColor: p.border }}
-    >
-      <Icon size={17} style={{ color: p.primary }} />
-      <div className="leading-none">
-        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: p.muted }}>
-          {label}
-        </p>
-        <p className="mt-1 text-sm font-black tabular-nums" style={{ color: p.text }}>
-          {value}
-        </p>
-      </div>
+    <div className="rounded-2xl px-4 py-3" style={{ background: `${tone}12` }}>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: tone }}>
+        {label}
+      </p>
+      <p className="mt-2 text-2xl font-black leading-none" style={{ color: tone }}>
+        {value}
+      </p>
     </div>
   );
 }
 
-function AttentionPanel({ employee, p, loaded }) {
+function FocusCard({ employee, loaded, p, error }) {
   if (!loaded) {
     return (
-      <section
-        className="flex h-full items-center justify-center rounded-lg border"
-        style={{ background: p.cardBg, borderColor: p.border }}
-      >
+      <section className="flex h-full min-h-[28rem] items-center justify-center rounded-3xl border" style={{ background: p.cardBg, borderColor: p.border }}>
         <p className="text-sm font-bold" style={{ color: p.muted }}>
           Memuat papan peringkat
         </p>
@@ -186,90 +155,95 @@ function AttentionPanel({ employee, p, loaded }) {
 
   if (!employee) {
     return (
-      <section
-        className="flex h-full items-center justify-center rounded-lg border"
-        style={{ background: p.cardBg, borderColor: p.border }}
-      >
-        <p className="text-sm font-bold" style={{ color: p.muted }}>
-          Belum ada data untuk bulan ini
+      <section className="flex h-full min-h-[28rem] flex-col items-center justify-center rounded-3xl border px-8 text-center" style={{ background: p.cardBg, borderColor: p.border }}>
+        <p className="text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: p.primary }}>
+          Display Siap
+        </p>
+        <h2 className="mt-4 text-4xl font-black leading-tight" style={{ color: p.text }}>
+          Belum ada data performa untuk bulan ini
+        </h2>
+        <p className="mt-3 max-w-xl text-sm font-semibold" style={{ color: p.muted }}>
+          Tampilan ini akan otomatis terisi setelah data leaderboard tersedia dari backend.
         </p>
       </section>
     );
   }
 
   const score = employee.combined_score ?? 0;
+  const attendance = employee.attendance_rate ?? 0;
   const tone = getScoreTone(score);
 
   return (
     <motion.section
-      key={employee.user_id}
+      key={employee.user_id || employee.nik || employee.name}
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-      className="relative h-full overflow-hidden rounded-lg border"
-      style={{ background: p.cardBg, borderColor: "rgba(220,38,38,0.24)" }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className="relative min-h-[28rem] overflow-hidden rounded-3xl border px-8 py-8"
+      style={{
+        background: p.cardBg,
+        borderColor: p.border,
+        boxShadow: "0 20px 60px rgba(15, 23, 42, 0.10)",
+      }}
     >
-      <div className="absolute inset-x-0 top-0 h-1.5" style={{ background: tone }} />
       <div
-        className="absolute inset-y-0 right-0 w-1/2 opacity-60"
-        style={{ background: `linear-gradient(135deg, transparent, ${RANK_ACCENTS[0].soft})` }}
+        className="pointer-events-none absolute inset-0"
+        style={{ background: `linear-gradient(135deg, ${tone}10, transparent 48%)` }}
       />
 
-      <div className="relative flex h-full flex-col p-7">
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <p className="mb-3 text-[11px] font-black uppercase tracking-[0.32em]" style={{ color: tone }}>
-              Perlu Perhatian
-            </p>
-            <h1 className="max-w-[11ch] text-6xl font-black leading-[0.92]" style={{ color: p.text }}>
-              Prioritas Kinerja
-            </h1>
-          </div>
-          <div className="rounded-lg px-4 py-3 text-right" style={{ background: "rgba(220,38,38,0.10)" }}>
-            <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: tone }}>
-              Rank
-            </p>
-            <p className="text-5xl font-black tabular-nums" style={{ color: tone }}>
-              01
-            </p>
+      <div className="relative flex h-full flex-col justify-between gap-8">
+        <div className="flex items-center gap-6">
+          <Avatar employee={employee} size="lg" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-6xl font-black leading-none" style={{ color: p.text }}>
+              {employee.name}
+            </h2>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <span
+                className="rounded-full px-4 py-2 text-sm font-black uppercase tracking-[0.16em]"
+                style={{ background: `${deptColor(employee.departement)}20`, color: deptColor(employee.departement) }}
+              >
+                {employee.departement || "Departemen"}
+              </span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: p.muted }}>
+                NIK {employee.nik || "-"}
+              </span>
+              {employee.last_punch && (
+                <span className="rounded-full px-4 py-2 text-sm font-black tabular-nums" style={{ background: `${tone}15`, color: tone }}>
+                  {new Date(employee.last_punch).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="mt-auto">
-          <div className="mb-6 flex items-end gap-5">
-            <Avatar employee={employee} size="lg" />
-            <div className="min-w-0 pb-1">
-              <h2 className="truncate text-4xl font-black leading-none" style={{ color: p.text }}>
-                {employee.name}
-              </h2>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span
-                  className="rounded-md px-2.5 py-1 text-xs font-black uppercase tracking-[0.16em]"
-                  style={{ background: `${deptColor(employee.departement)}20`, color: deptColor(employee.departement) }}
-                >
-                  {employee.departement || "Departemen"}
-                </span>
-                <span className="font-mono text-xs font-bold" style={{ color: p.muted }}>
-                  NIK {employee.nik || "-"}
-                </span>
-              </div>
+        <div className="grid grid-cols-[1.15fr_0.85fr] gap-4">
+          <div className="rounded-3xl p-6 flex flex-col justify-between" style={{ background: p.inputBg }}>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
+              Jam Absensi
+            </p>
+            <p className="mt-4 text-7xl font-black tabular-nums leading-none font-mono" style={{ color: tone }}>
+              {employee.last_punch
+                ? new Date(employee.last_punch).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+                : "—"}
+            </p>
+            <p className="mt-3 text-sm font-semibold" style={{ color: p.muted }}>
+              {employee.last_punch
+                ? new Date(employee.last_punch).toLocaleDateString("id-ID", { day: "numeric", month: "long" })
+                : "Belum ada absensi"}
+            </p>
+          </div>
+
+          <div className="grid gap-3">
+            <ScorePill label="Performa" value={employee.performance_status || "-"} tone={p.primary} />
+            <div className="rounded-2xl px-4 py-3 flex-1" style={{ background: `${p.primary}12` }}>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: p.primary }}>
+                Deskripsi
+              </p>
+              <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: p.text }}>
+                {employee.performance_description || "-"}
+              </p>
             </div>
-          </div>
-
-          <div className="mb-7 grid grid-cols-3 gap-4" style={{ color: p.text }}>
-            <MetricBlock label="Kehadiran" value={employee.attendance_rate ?? 0} suffix="%" tone={getScoreTone(employee.attendance_rate ?? 0)} />
-            <MetricBlock label="Performa" value={employee.performance_status || "-"} tone={p.primary} />
-            <MetricBlock label="Skor" value={<AnimatedNumber value={score} />} tone={tone} />
-          </div>
-
-          <div className="h-3 overflow-hidden rounded-full" style={{ background: p.inputBg }}>
-            <motion.div
-              className="h-full rounded-full"
-              style={{ background: tone }}
-              initial={{ width: 0 }}
-              animate={{ width: `${score}%` }}
-              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            />
           </div>
         </div>
       </div>
@@ -277,62 +251,23 @@ function AttentionPanel({ employee, p, loaded }) {
   );
 }
 
-function PodiumCard({ employee, rank, p }) {
-  if (!employee) return <div className="min-h-0" />;
-
-  const accent = RANK_ACCENTS[rank - 1] || RANK_ACCENTS[2];
+function RankRow({ employee, rank, p, isFocused }) {
   const score = employee.combined_score ?? 0;
   const tone = getScoreTone(score);
 
   return (
     <motion.div
-      key={employee.user_id}
-      initial={{ opacity: 0, y: 16 }}
+      layout
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: rank * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="grid min-h-0 grid-cols-[auto_1fr_auto] items-center gap-4 rounded-lg border p-4"
-      style={{ background: p.cardBg, borderColor: accent.color }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="grid grid-cols-[3rem_auto_1fr_auto] items-center gap-4 rounded-2xl border px-4 py-3"
+      style={{
+        background: isFocused ? `${tone}10` : p.cardBg,
+        borderColor: isFocused ? `${tone}40` : p.border,
+      }}
     >
-      <div className="text-3xl font-black tabular-nums" style={{ color: accent.color }}>
-        {accent.label}
-      </div>
-      <div className="flex min-w-0 items-center gap-3">
-        <Avatar employee={employee} size="md" />
-        <div className="min-w-0">
-          <p className="truncate text-xl font-black leading-tight" style={{ color: p.text }}>
-            {employee.name}
-          </p>
-          <p className="truncate text-xs font-bold uppercase tracking-[0.16em]" style={{ color: p.muted }}>
-            {employee.departement || "-"} / {employee.nik || "-"}
-          </p>
-        </div>
-      </div>
-      <div className="text-right">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: p.muted }}>
-          Skor
-        </p>
-        <p className="text-3xl font-black tabular-nums" style={{ color: tone }}>
-          {score}
-        </p>
-      </div>
-    </motion.div>
-  );
-}
-
-function RankRow({ employee, rank, index, p }) {
-  const score = employee.combined_score ?? 0;
-  const tone = getScoreTone(score);
-  const accent = rank <= 3 ? RANK_ACCENTS[rank - 1] : null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 18 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.035, duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
-      className="grid grid-cols-[3.5rem_auto_1fr_7rem] items-center gap-4 rounded-lg border px-4 py-3"
-      style={{ background: accent ? accent.soft : p.cardBg, borderColor: accent ? `${accent.color}55` : p.border }}
-    >
-      <p className="text-center text-lg font-black tabular-nums" style={{ color: accent?.color || p.muted }}>
+      <p className="text-center text-lg font-black tabular-nums" style={{ color: tone }}>
         {String(rank).padStart(2, "0")}
       </p>
       <Avatar employee={employee} size="sm" />
@@ -344,17 +279,11 @@ function RankRow({ employee, rank, index, p }) {
           {employee.departement || "-"} / {employee.nik || "-"}
         </p>
       </div>
-      <div className="flex items-center justify-end gap-3">
-        <div className="h-1.5 w-16 overflow-hidden rounded-full" style={{ background: p.inputBg }}>
-          <motion.div
-            className="h-full rounded-full"
-            style={{ background: tone }}
-            initial={{ width: 0 }}
-            animate={{ width: `${score}%` }}
-            transition={{ delay: index * 0.035 + 0.2, duration: 0.55 }}
-          />
-        </div>
-        <p className="w-9 text-right text-xl font-black tabular-nums" style={{ color: tone }}>
+      <div className="text-right">
+        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: p.muted }}>
+          Skor
+        </p>
+        <p className="mt-1 text-2xl font-black tabular-nums leading-none" style={{ color: tone }}>
           {score}
         </p>
       </div>
@@ -364,104 +293,158 @@ function RankRow({ employee, rank, index, p }) {
 
 export default function Display() {
   const { isDark, p, toggleTheme } = useAppSettings();
-  const { time, date } = useClock();
-  const now = new Date();
-  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const monthLabel = new Date(`${month}-01`).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+  const { time, date, month, monthLabel } = useClock();
 
   const [data, setData] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
-  const refreshIn = useRefreshCountdown(REFRESH_INTERVAL);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [nextRefreshAt, setNextRefreshAt] = useState(() => Date.now() + REFRESH_INTERVAL);
+  const [focusIndex, setFocusIndex] = useState(0);
 
-  const load = useCallback(async () => {
-    try {
-      setError("");
-      const response = await fetch(`${apiBaseUrl}/api/performance/leaderboard?month=${month}`);
-      if (!response.ok) throw new Error(`Leaderboard request failed: ${response.status}`);
-      const json = await response.json();
-      setData(Array.isArray(json.data) ? json.data : []);
-      setLoaded(true);
-    } catch (err) {
-      console.error(err);
-      setError("Koneksi data belum tersedia");
-      setLoaded(true);
-    }
-  }, [month]);
+  const inFlightRef = useRef(false);
+  const activeRef = useRef(true);
+  const controllersRef = useRef(new Set());
+
+  const refreshIn = useRefreshCountdown(nextRefreshAt);
+  const ranked = [...data].reverse();
+  const activeFocusIndex = ranked.length ? focusIndex % ranked.length : 0;
+  const focusEmployee = ranked[activeFocusIndex] || ranked[0] || null;
+  const visibleQueue = ranked.slice(0, 6);
 
   useEffect(() => {
-    const startId = setTimeout(load, 0);
-    const id = setInterval(load, REFRESH_INTERVAL);
+    activeRef.current = true;
+    const controllers = controllersRef.current;
     return () => {
-      clearTimeout(startId);
-      clearInterval(id);
+      activeRef.current = false;
+      for (const controller of controllers) controller.abort();
+      controllers.clear();
     };
-  }, [load]);
+  }, []);
 
-  const ranked = useMemo(() => [...data].reverse(), [data]);
-  const focusEmployee = ranked[0] || null;
-  const runnerUp = ranked[1] || null;
-  const third = ranked[2] || null;
-  const averageScore = ranked.length
-    ? Math.round(ranked.reduce((sum, employee) => sum + (employee.combined_score ?? 0), 0) / ranked.length)
-    : 0;
-  const lowScoreCount = ranked.filter((employee) => (employee.combined_score ?? 0) < 60).length;
-  const progress = (refreshIn / (REFRESH_INTERVAL / 1000)) * 100;
+  useEffect(() => {
+    if (ranked.length <= 1) return undefined;
+    const id = setInterval(() => {
+      setFocusIndex((current) => (current + 1) % ranked.length);
+    }, FOCUS_ROTATE_INTERVAL);
+    return () => clearInterval(id);
+  }, [ranked.length]);
+
+  useEffect(() => {
+    let intervalId;
+
+    const load = async () => {
+      if (inFlightRef.current) return;
+
+      const controller = new AbortController();
+      controllersRef.current.add(controller);
+      inFlightRef.current = true;
+
+      if (activeRef.current) {
+        setIsRefreshing(true);
+        setNextRefreshAt(Date.now() + REFRESH_INTERVAL);
+      }
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/api/performance/leaderboard?month=${month}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) throw new Error(`Leaderboard request failed: ${response.status}`);
+
+        const json = await response.json();
+        const nextData = Array.isArray(json.data) ? json.data : [];
+
+        if (!activeRef.current) return;
+        setData(nextData);
+        setLoaded(true);
+        setError("");
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+        console.error(err);
+        if (!activeRef.current) return;
+        setLoaded(true);
+        setError("Koneksi data belum tersedia");
+      } finally {
+        controllersRef.current.delete(controller);
+        inFlightRef.current = false;
+        if (activeRef.current) setIsRefreshing(false);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") load();
+    };
+
+    const handleOnline = () => load();
+
+    load();
+    intervalId = setInterval(load, REFRESH_INTERVAL);
+    window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [month]);
 
   return (
     <div
-      className="relative h-screen overflow-hidden px-6 py-5"
-      style={{ background: p.pageBg, color: p.text, fontFamily: "var(--font-geist-sans), system-ui, sans-serif", userSelect: "none" }}
+      className="relative min-h-screen overflow-hidden px-6 py-6"
+      style={{
+        background: p.pageBg,
+        color: p.text,
+        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
+        userSelect: "none",
+      }}
     >
       <div
-        className="pointer-events-none absolute inset-0 opacity-70"
+        className="pointer-events-none absolute inset-0"
         style={{
           background: isDark
-            ? "linear-gradient(135deg, rgba(59,111,212,0.12), transparent 38%, rgba(245,158,11,0.07))"
-            : "linear-gradient(135deg, rgba(59,111,212,0.10), transparent 40%, rgba(220,38,38,0.05))",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.09]"
-        style={{
-          backgroundImage: "linear-gradient(90deg, currentColor 1px, transparent 1px), linear-gradient(0deg, currentColor 1px, transparent 1px)",
-          backgroundSize: "56px 56px",
-          color: p.text,
+            ? "radial-gradient(circle at top left, rgba(59,111,212,0.15), transparent 36%), radial-gradient(circle at bottom right, rgba(91,141,248,0.12), transparent 34%)"
+            : "radial-gradient(circle at top left, rgba(59,111,212,0.10), transparent 36%), radial-gradient(circle at bottom right, rgba(91,141,248,0.08), transparent 34%)",
         }}
       />
 
-      <main className="relative z-10 grid h-full grid-rows-[auto_1fr_auto] gap-5">
-        <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-5">
+      <main className="relative z-10 grid min-h-[calc(100vh-3rem)] grid-rows-[auto_auto_1fr] gap-5">
+        <header className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-white">
+            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo.png" alt="PT GAS" className="h-full w-full object-cover" />
             </div>
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.24em]" style={{ color: p.text }}>
+              <p className="text-sm font-black uppercase tracking-[0.26em]" style={{ color: p.text }}>
                 PT. Global Anugerah Setia
               </p>
-              <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em]" style={{ color: p.muted }}>
-                Papan kontrol kinerja SDM
+              <p className="mt-2 text-xs font-bold uppercase tracking-[0.18em]" style={{ color: p.muted }}>
+                Display kinerja SDM
               </p>
             </div>
           </div>
 
-          <div className="flex items-end font-mono leading-none tabular-nums">
-            <span className="text-6xl font-black" style={{ color: p.text }}>{time.h}</span>
-            <span className="pb-1 text-5xl font-black" style={{ color: p.primary }}>:</span>
-            <span className="text-6xl font-black" style={{ color: p.text }}>{time.m}</span>
-            <span className="pb-1 text-5xl font-black" style={{ color: p.faint }}>:</span>
-            <span className="text-6xl font-black" style={{ color: p.muted }}>{time.s}</span>
-          </div>
+          <div className="flex items-start gap-3">
+            <div className="rounded-3xl border px-5 py-4 text-right" style={{ background: p.cardBg, borderColor: p.border }}>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
+                Waktu Lokal
+              </p>
+              <div className="mt-3 flex items-end gap-2 font-mono leading-none tabular-nums">
+                <span className="text-6xl font-black" style={{ color: p.text }}>{time.h}</span>
+                <span className="pb-1 text-5xl font-black" style={{ color: p.primary }}>:</span>
+                <span className="text-6xl font-black" style={{ color: p.text }}>{time.m}</span>
+                <span className="pb-1 text-5xl font-black" style={{ color: p.faint }}>:</span>
+                <span className="text-6xl font-black" style={{ color: p.muted }}>{time.s}</span>
+              </div>
+            </div>
 
-          <div className="flex items-center justify-end gap-3">
-            <StatusPill icon={CalendarDays} label="Periode" value={monthLabel} p={p} />
-            <StatusPill icon={Factory} label="Tanggal" value={date} p={p} />
             <button
               aria-label="Toggle theme"
               onClick={toggleTheme}
-              className="flex h-12 w-12 items-center justify-center rounded-lg border transition"
+              className="flex h-14 w-14 items-center justify-center rounded-2xl border transition"
               style={{ background: p.cardBg, borderColor: p.border, color: p.text }}
             >
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
@@ -469,90 +452,71 @@ export default function Display() {
           </div>
         </header>
 
-        <section className="grid min-h-0 grid-cols-[1.06fr_0.94fr] gap-5">
+        <section className="grid grid-cols-1 gap-4">
+          <SoftStat label="Periode" value={monthLabel} helper={date} icon={CalendarDays} p={p} />
+        </section>
+
+        <section className="grid min-h-0 grid-cols-[1.18fr_0.82fr] gap-5">
           <div className="min-h-0">
             <AnimatePresence mode="wait">
-              <AttentionPanel employee={focusEmployee} p={p} loaded={loaded} />
+              <FocusCard employee={focusEmployee} loaded={loaded} p={p} error={error} />
             </AnimatePresence>
           </div>
 
-          <div className="grid min-h-0 grid-rows-[auto_auto_1fr] gap-4">
-            <div className="grid grid-cols-3 gap-4">
-              <StatusPill icon={Gauge} label="Rata-rata" value={`${averageScore}`} p={p} />
-              <StatusPill icon={TrendingDown} label="Di bawah 60" value={`${lowScoreCount}`} p={p} />
-              <StatusPill icon={RotateCcw} label="Refresh" value={`${Math.floor(refreshIn / 60)}:${String(refreshIn % 60).padStart(2, "0")}`} p={p} />
+          <aside className="flex min-h-0 flex-col rounded-3xl border p-5" style={{ background: p.cardBg, borderColor: p.border }}>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: p.primary }}>
+                  Peringkat Terbawah
+                </p>
+                <p className="mt-2 text-sm font-semibold" style={{ color: p.muted }}>
+                  Enam skor terendah pada periode berjalan
+                </p>
+              </div>
+              <div className="flex items-center gap-2 rounded-full px-3 py-2" style={{ background: error ? "rgba(220,38,38,0.10)" : "rgba(22,163,74,0.10)" }}>
+                <Signal size={14} style={{ color: error ? "#dc2626" : "#16a34a" }} />
+                <span className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: error ? "#dc2626" : "#16a34a" }}>
+                  {error ? "Offline" : "Online"}
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <PodiumCard employee={runnerUp} rank={2} p={p} />
-              <PodiumCard employee={third} rank={3} p={p} />
-            </div>
+            {error ? (
+              <div className="mt-4 rounded-2xl px-4 py-3" style={{ background: "rgba(220,38,38,0.08)", color: "#dc2626" }}>
+                <p className="text-sm font-bold">{error}</p>
+                <p className="mt-1 text-xs font-semibold">Menampilkan data terakhir yang berhasil dimuat.</p>
+              </div>
+            ) : null}
 
-            <section className="flex min-h-0 flex-col rounded-lg border p-4" style={{ background: p.cardBg, borderColor: p.border }}>
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: p.primary }}>
-                    Antrian Peringkat
-                  </p>
-                  <p className="mt-1 text-xs font-bold" style={{ color: p.muted }}>
-                    Urutan dari skor paling rendah ke paling tinggi
+            <div className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
+              {visibleQueue.map((employee, index) => {
+                const currentFocusKey = focusEmployee?.user_id || focusEmployee?.nik || focusEmployee?.name;
+                const rowKey = employee.user_id || employee.nik || employee.name;
+
+                return (
+                  <RankRow
+                    key={rowKey}
+                    employee={employee}
+                    rank={index + 1}
+                    p={p}
+                    isFocused={currentFocusKey === rowKey}
+                  />
+                );
+              })}
+
+              {loaded && visibleQueue.length === 0 ? (
+                <div className="flex h-full min-h-40 items-center justify-center rounded-2xl" style={{ background: p.inputBg }}>
+                  <p className="text-sm font-bold" style={{ color: p.muted }}>
+                    Belum ada data untuk ditampilkan
                   </p>
                 </div>
-                {error ? (
-                  <p className="rounded-md px-3 py-1 text-xs font-black" style={{ background: "rgba(220,38,38,0.12)", color: "#dc2626" }}>
-                    {error}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
-                <AnimatePresence>
-                  {ranked.map((employee, index) => (
-                    <RankRow
-                      key={employee.user_id || `${employee.nik}-${index}`}
-                      employee={employee}
-                      rank={index + 1}
-                      index={index}
-                      p={p}
-                    />
-                  ))}
-                </AnimatePresence>
-                {loaded && ranked.length === 0 ? (
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-sm font-bold" style={{ color: p.muted }}>
-                      Belum ada data untuk bulan ini
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </section>
-          </div>
+              ) : null}
+            </div>
+          </aside>
         </section>
-
-        <footer className="grid h-10 grid-cols-[1fr_auto] items-center overflow-hidden rounded-lg" style={{ background: p.primary }}>
-          <div className="overflow-hidden whitespace-nowrap">
-            <div className="inline-flex h-full items-center" style={{ animation: "display-ticker 52s linear infinite" }}>
-              {[1, 2, 3, 4].map((item) => (
-                <span key={item} className="px-10 text-xs font-black uppercase tracking-[0.24em] text-white">
-                  Grow Achieve Success / PT. Global Anugerah Setia Indonesia / Papan Peringkat Kinerja SDM /
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="h-full w-48 px-4 py-3" style={{ background: "rgba(0,0,0,0.18)" }}>
-            <div className="h-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.22)" }}>
-              <motion.div className="h-full rounded-full bg-white" animate={{ width: `${progress}%` }} transition={{ duration: 0.85, ease: "linear" }} />
-            </div>
-          </div>
-        </footer>
       </main>
 
       <style>{`
-        @keyframes display-ticker {
-          from { transform: translateX(0); }
-          to { transform: translateX(-25%); }
-        }
-
         ::-webkit-scrollbar {
           display: none;
         }

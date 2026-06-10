@@ -1,6 +1,48 @@
 const express = require("express");
 const router = express.Router();
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
 const prisma = require("../../libs/prisma");
+
+const uploadDir = path.join(__dirname, "../../public/uploads/employees");
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: uploadDir,
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);
+  },
+});
+
+const uploadEmployeePhoto = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) return cb(new Error("Only image files are allowed"));
+    cb(null, true);
+  },
+});
+
+function getBaseUrl(req) {
+  return `${req.protocol}://${req.get("host")}`;
+}
+
+router.post("/upload-photo", (req, res, next) => {
+  uploadEmployeePhoto.single("photo")(req, res, (err) => {
+    if (!err) return next();
+    const isSizeError = err.code === "LIMIT_FILE_SIZE";
+    return res.status(400).json({ error: isSizeError ? "Image must be 2 MB or smaller" : err.message });
+  });
+}, (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Photo file is required" });
+  res.status(201).json({
+    message: "Photo uploaded successfully",
+    url: `${getBaseUrl(req)}/uploads/employees/${req.file.filename}`,
+  });
+});
 
 router.get("/", async (req, res) => {
   try {
@@ -51,7 +93,6 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  console.log("masuk post");
   try {
     const handleData = req.body;
 
@@ -61,15 +102,14 @@ router.post("/", async (req, res) => {
       shift_id: handleData.shift_id || null,
       link_image: handleData.link_image || null,
     };
-    console.log(handleData);
-    const checkNik = await prisma.users.findMany({
+    const existingNik = await prisma.users.findFirst({
       where: {
         nik: handleData.nik,
       },
     });
 
-    if (checkNik.length > 1) {
-      return res.status(403).json({ error: "Double NIK" });
+    if (existingNik) {
+      return res.status(409).json({ error: "NIK already exists" });
     }
 
     const newMember = await prisma.users.create({

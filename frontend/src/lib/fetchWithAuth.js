@@ -15,10 +15,11 @@ const onRefreshed = () => {
 };
 
 const fetchWithAuth = async (url, option = {}) => {
+  const isFormData = typeof FormData !== "undefined" && option.body instanceof FormData;
   const defaultOptions = {
     ...option,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...option.headers,
     },
     credentials: "include",

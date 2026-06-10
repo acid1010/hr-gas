@@ -65,9 +65,13 @@ router.get("/leaderboard", async (req, res) => {
     });
 
     const daysMap = {};
+    const lastPunchMap = {};
     for (const r of checkIns) {
       if (!daysMap[r.user_id]) daysMap[r.user_id] = new Set();
       daysMap[r.user_id].add(r.punch_time.toISOString().slice(0, 10));
+      if (!lastPunchMap[r.user_id] || r.punch_time > lastPunchMap[r.user_id]) {
+        lastPunchMap[r.user_id] = r.punch_time;
+      }
     }
 
     const performances = await prisma.performance.findMany({ orderBy: { created_at: "desc" } });
@@ -91,8 +95,10 @@ router.get("/leaderboard", async (req, res) => {
         nik: emp.nik,
         departement: emp.departement,
         link_image: emp.link_image || null,
+        last_punch: lastPunchMap[emp.id] || null,
         attendance_rate: Math.round(attendanceRate * 100),
         performance_status: perf?.status || null,
+        performance_description: perf?.description || null,
         performance_rating: Math.round(perfRating * 100),
         combined_score: combinedScore,
       };
