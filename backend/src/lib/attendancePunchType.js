@@ -9,9 +9,10 @@ function getLocalDayRange(date) {
 }
 
 function normalizeDevicePunchType(value) {
+  // Many ZKTeco devices return 0 for every punch regardless of in/out.
+  // Only trust explicit check-out signal (1) — let 0 fall through to time-based inference.
   if (value === null || value === undefined || value === "") return null;
-  const type = Number(value);
-  return type === 0 || type === 1 ? type : null;
+  return Number(value) === 1 ? 1 : null;
 }
 
 function minutesFromLocalTime(date) {
