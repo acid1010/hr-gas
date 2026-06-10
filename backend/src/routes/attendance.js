@@ -4,6 +4,7 @@ const prisma = require("../../libs/prisma");
 const ZKLib = require("node-zklib");
 const ExcelJS = require("exceljs");
 const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
+const { buildPunchTypeMaps, classifyPunchTypeFromMaps, normalizeDevicePunchType } = require("../lib/attendancePunchType");
 const zkRealtime = require("../lib/zkRealtime");
 
 const DEVICE_IP = process.env.ZK_IP || "192.128.69.33";
@@ -25,39 +26,45 @@ router.post("/sync", async (req, res) => {
       return res.status(200).json({ message: "No records on device", synced: 0 });
     }
 
-    // Map device user IDs to DB users via nik
     const deviceUserIds = [...new Set(logs.map((l) => String(l.deviceUserId)))];
-    const dbUsers = await prisma.users.findMany({
-      where: { nik: { in: deviceUserIds.map((id) => parseFloat(id)) } },
-      select: { id: true, nik: true },
-    });
+    const sortedLogs = [...logs].sort((a, b) => new Date(a.recordTime) - new Date(b.recordTime));
+
+    // Two queries total — no per-record DB calls
+    const [dbUsers, { shiftMap, existingMap }] = await Promise.all([
+      prisma.users.findMany({
+        where: { nik: { in: deviceUserIds.map(parseFloat) } },
+        select: { id: true, nik: true },
+      }),
+      buildPunchTypeMaps(prisma, deviceUserIds, sortedLogs),
+    ]);
 
     const nikToUserId = {};
-    for (const u of dbUsers) {
-      nikToUserId[String(u.nik)] = u.id;
-    }
+    for (const u of dbUsers) nikToUserId[String(u.nik)] = u.id;
 
     let synced = 0;
     let skipped = 0;
+    const inProgressMap = {};
 
-    for (const log of logs) {
+    for (const log of sortedLogs) {
       const deviceUid = String(log.deviceUserId);
       const punchTime = new Date(log.recordTime);
       const userId = nikToUserId[deviceUid] || null;
 
+      const deviceType = normalizeDevicePunchType(log.type);
+      const punchType = deviceType !== null
+        ? deviceType
+        : classifyPunchTypeFromMaps(deviceUid, punchTime, shiftMap, existingMap, inProgressMap);
+
+      const day = punchTime.toISOString().slice(0, 10);
+      const key = `${deviceUid}-${day}`;
+      if (!inProgressMap[key]) inProgressMap[key] = [];
+      inProgressMap[key].push({ punch_time: punchTime, punch_type: punchType });
+
       try {
         await prisma.attendance.upsert({
           where: { device_uid_punch_time: { device_uid: deviceUid, punch_time: punchTime } },
-          create: {
-            device_uid: deviceUid,
-            punch_time: punchTime,
-            punch_type: log.type ?? 0,
-            user_id: userId,
-          },
-          update: {
-            punch_type: log.type ?? 0,
-            user_id: userId,
-          },
+          create: { device_uid: deviceUid, punch_time: punchTime, punch_type: punchType, user_id: userId },
+          update: { punch_type: punchType, user_id: userId },
         });
         synced++;
       } catch {
