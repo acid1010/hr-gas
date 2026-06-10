@@ -47,7 +47,11 @@ app.use(cors(optionsCors));
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ limit: "5mb", extended: true }));
 app.use(cookieParser());
-app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
+app.use("/uploads", (req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Disposition", "attachment");
+  next();
+}, express.static(path.join(__dirname, "../public/uploads")));
 
 // Auth routes are public (login/refresh must work without a valid access token)
 app.use("/auth", authRoutes);

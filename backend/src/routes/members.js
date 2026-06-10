@@ -9,21 +9,12 @@ const prisma = require("../../libs/prisma");
 const uploadDir = path.join(__dirname, "../../public/uploads/employees");
 fs.mkdirSync(uploadDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);
-  },
-});
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MIME_TO_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
 
 const uploadEmployeePhoto = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith("image/")) return cb(new Error("Only image files are allowed"));
-    cb(null, true);
-  },
 });
 
 function getBaseUrl(req) {
@@ -36,11 +27,22 @@ router.post("/upload-photo", (req, res, next) => {
     const isSizeError = err.code === "LIMIT_FILE_SIZE";
     return res.status(400).json({ error: isSizeError ? "Image must be 2 MB or smaller" : err.message });
   });
-}, (req, res) => {
+}, async (req, res) => {
   if (!req.file) return res.status(400).json({ error: "Photo file is required" });
+
+  const { fileTypeFromBuffer } = await import("file-type");
+  const detected = await fileTypeFromBuffer(req.file.buffer);
+
+  if (!detected || !ALLOWED_MIME.has(detected.mime)) {
+    return res.status(400).json({ error: "Only JPEG, PNG, WebP, and GIF images are allowed" });
+  }
+
+  const filename = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}.${MIME_TO_EXT[detected.mime]}`;
+  fs.writeFileSync(path.join(uploadDir, filename), req.file.buffer);
+
   res.status(201).json({
     message: "Photo uploaded successfully",
-    url: `${getBaseUrl(req)}/uploads/employees/${req.file.filename}`,
+    url: `${getBaseUrl(req)}/uploads/employees/${filename}`,
   });
 });
 
