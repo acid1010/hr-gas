@@ -43,6 +43,14 @@ const optionsCors = {
   credentials: true,
 };
 
+// Chrome Private Network Access — allow LAN origins to reach this loopback server
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS" && req.headers["access-control-request-private-network"]) {
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
+  }
+  next();
+});
+
 app.use(cors(optionsCors));
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ limit: "5mb", extended: true }));
