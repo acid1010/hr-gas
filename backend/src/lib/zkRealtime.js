@@ -62,9 +62,9 @@ class ZKRealtimeManager {
           update: { user_id: user?.id ?? null },
         }).catch(() => {});
 
+        // device_uid (fingerprint device ID) intentionally omitted — not needed by clients
         this._broadcast({
           type: "punch",
-          device_uid: deviceUid,
           punch_time: punchTime.toISOString(),
           punch_type: 0,
           user: user ?? null,
