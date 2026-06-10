@@ -14,6 +14,8 @@ const attendanceRoutes = require("./routes/attendance");
 const overtimeRoutes = require("./routes/overtime");
 const shiftsRoutes = require("./routes/shifts");
 const holidaysRoutes = require("./routes/holidays");
+const zkRealtime = require("./lib/zkRealtime");
+const { startAttendanceSafetySync } = require("./lib/attendanceSafetySync");
 
 const port = process.env.PORT;
 
@@ -95,6 +97,8 @@ const startServer = async () => {
 
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
+      zkRealtime.start();
+      startAttendanceSafetySync();
     });
   } catch (error) {
     console.log("Fatal error during server startup:", error);

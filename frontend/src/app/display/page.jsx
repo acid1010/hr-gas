@@ -36,6 +36,12 @@ function getScoreTone(score) {
   return "#dc2626";
 }
 
+function realtimeStatusMeta(status) {
+  if (status === "live") return { label: "Live", helper: "Fingerprint aktif", color: "#16a34a" };
+  if (status === "offline") return { label: "Offline", helper: "Menunggu backend", color: "#dc2626" };
+  return { label: "Menghubungkan", helper: "Mencari device", color: "#d97706" };
+}
+
 
 function useClock() {
   const [now, setNow] = useState(() => new Date());
@@ -300,6 +306,7 @@ export default function Display() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [nextRefreshAt, setNextRefreshAt] = useState(() => Date.now() + REFRESH_INTERVAL);
   const [focusIndex, setFocusIndex] = useState(0);
+  const [realtimeStatus, setRealtimeStatus] = useState("connecting");
 
   const inFlightRef = useRef(false);
   const activeRef = useRef(true);
@@ -312,6 +319,7 @@ export default function Display() {
   const activeFocusIndex = ranked.length ? focusIndex % ranked.length : 0;
   const focusEmployee = ranked[activeFocusIndex] || ranked[0] || null;
   const visibleQueue = ranked.slice(0, 6);
+  const realtime = realtimeStatusMeta(realtimeStatus);
 
   useEffect(() => {
     activeRef.current = true;
@@ -339,16 +347,23 @@ export default function Display() {
 
   useEffect(() => {
     const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime-display`);
+    es.onopen = () => setRealtimeStatus("connecting");
+    es.onerror = () => setRealtimeStatus("offline");
     es.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
+        if (event.type === "status") {
+          setRealtimeStatus(event.connected ? "live" : "connecting");
+          return;
+        }
         if (event.type !== "punch" || !event.user_id) return;
+        setRealtimeStatus("live");
         const idx = rankedRef.current.findIndex((emp) => emp.user_id === event.user_id);
         if (idx === -1) return;
         setFocusIndex(idx);
         setData((prev) =>
           prev.map((emp) =>
-            emp.user_id === event.user_id ? { ...emp, last_punch: event.punch_time } : emp,
+            emp.user_id === event.user_id ? { ...emp, last_punch: event.punch_time, last_punch_type: event.punch_type } : emp,
           ),
         );
       } catch {}
@@ -454,6 +469,21 @@ export default function Display() {
           </div>
 
           <div className="flex items-start gap-3">
+            <div className="rounded-3xl border px-5 py-4 text-right" style={{ background: p.cardBg, borderColor: p.border }}>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
+                Realtime
+              </p>
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <Signal size={16} style={{ color: realtime.color }} />
+                <span className="text-lg font-black uppercase tracking-[0.12em]" style={{ color: realtime.color }}>
+                  {realtime.label}
+                </span>
+              </div>
+              <p className="mt-2 text-xs font-bold" style={{ color: p.muted }}>
+                {realtime.helper}
+              </p>
+            </div>
+
             <div className="rounded-3xl border px-5 py-4 text-right" style={{ background: p.cardBg, borderColor: p.border }}>
               <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
                 Waktu Lokal
