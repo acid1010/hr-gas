@@ -305,9 +305,12 @@ export default function Display() {
   const inFlightRef = useRef(false);
   const activeRef = useRef(true);
   const controllersRef = useRef(new Set());
+  const punchLockRef = useRef(null); // { until: timestamp }
+  const rankedRef = useRef([]);
 
   const refreshIn = useRefreshCountdown(nextRefreshAt);
   const ranked = [...data].reverse();
+  useEffect(() => { rankedRef.current = ranked; }, [ranked]);
   const activeFocusIndex = ranked.length ? focusIndex % ranked.length : 0;
   const focusEmployee = ranked[activeFocusIndex] || ranked[0] || null;
   const visibleQueue = ranked.slice(0, 6);
@@ -325,10 +328,31 @@ export default function Display() {
   useEffect(() => {
     if (ranked.length <= 1) return undefined;
     const id = setInterval(() => {
+      if (punchLockRef.current && Date.now() < punchLockRef.current.until) return;
       setFocusIndex((current) => (current + 1) % ranked.length);
     }, FOCUS_ROTATE_INTERVAL);
     return () => clearInterval(id);
   }, [ranked.length]);
+
+  useEffect(() => {
+    const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime`);
+    es.onmessage = (e) => {
+      try {
+        const event = JSON.parse(e.data);
+        if (event.type !== "punch" || !event.user?.id) return;
+        const idx = rankedRef.current.findIndex((emp) => emp.user_id === event.user.id);
+        if (idx === -1) return;
+        setFocusIndex(idx);
+        setData((prev) =>
+          prev.map((emp) =>
+            emp.user_id === event.user.id ? { ...emp, last_punch: event.punch_time } : emp,
+          ),
+        );
+        punchLockRef.current = { until: Date.now() + 30000 };
+      } catch {}
+    };
+    return () => es.close();
+  }, []);
 
   useEffect(() => {
     let intervalId;

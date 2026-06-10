@@ -66,7 +66,14 @@ app.use("/auth", authRoutes);
 
 // Protected routes
 app.use("/members", authMiddleware, membersRoutes);
-app.use("/api/attendance", authMiddleware, attendanceRoutes);
+app.use(
+  "/api/attendance",
+  (req, res, next) => {
+    if (req.method === "GET" && req.path === "/realtime") return next();
+    return authMiddleware(req, res, next);
+  },
+  attendanceRoutes,
+);
 
 // /api/performance: leaderboard is public (TV /display screens), everything else requires auth
 app.use(
