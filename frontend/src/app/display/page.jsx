@@ -7,7 +7,6 @@ import { useAppSettings } from "@/lib/useAppSettings";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
-const FOCUS_ROTATE_INTERVAL = 12 * 1000;
 
 const DEPT_COLORS = {
   production: "#3b6fd4",
@@ -305,7 +304,6 @@ export default function Display() {
   const inFlightRef = useRef(false);
   const activeRef = useRef(true);
   const controllersRef = useRef(new Set());
-  const punchLockRef = useRef(null); // { until: timestamp }
   const rankedRef = useRef([]);
 
   const refreshIn = useRefreshCountdown(nextRefreshAt);
@@ -325,14 +323,19 @@ export default function Display() {
     };
   }, []);
 
+  // Snap focus to most recently punched employee whenever data changes
   useEffect(() => {
-    if (ranked.length <= 1) return undefined;
-    const id = setInterval(() => {
-      if (punchLockRef.current && Date.now() < punchLockRef.current.until) return;
-      setFocusIndex((current) => (current + 1) % ranked.length);
-    }, FOCUS_ROTATE_INTERVAL);
-    return () => clearInterval(id);
-  }, [ranked.length]);
+    if (!data.length) return;
+    const r = [...data].reverse();
+    let bestIdx = 0;
+    let bestTime = null;
+    for (let i = 0; i < r.length; i++) {
+      if (!r[i].last_punch) continue;
+      const t = new Date(r[i].last_punch).getTime();
+      if (bestTime === null || t > bestTime) { bestTime = t; bestIdx = i; }
+    }
+    setFocusIndex(bestIdx);
+  }, [data]);
 
   useEffect(() => {
     const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime-display`);
@@ -348,7 +351,6 @@ export default function Display() {
             emp.user_id === event.user_id ? { ...emp, last_punch: event.punch_time } : emp,
           ),
         );
-        punchLockRef.current = { until: Date.now() + 30000 };
       } catch {}
     };
     return () => es.close();
