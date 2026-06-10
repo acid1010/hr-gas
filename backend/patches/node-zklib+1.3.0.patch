@@ -1,0 +1,25 @@
+diff --git a/node_modules/node-zklib/utils.js b/node_modules/node-zklib/utils.js
+index db9cbb5..480624f 100644
+--- a/node_modules/node-zklib/utils.js
++++ b/node_modules/node-zklib/utils.js
+@@ -152,6 +152,7 @@ module.exports.decodeRecordData40 = (recordData)=>{
+         .split('\0')
+         .shift(),
+         recordTime: parseTimeToDate(recordData.readUInt32LE(27)),
++        type: recordData.readUInt8(24), // inOutStatus: 0=check-in, 1=check-out
+       }
+       return record
+ }
+@@ -180,10 +181,10 @@ module.exports.decodeRecordRealTimeLog52 =(recordData)=>{
+   .split('\0')
+   .shift()
+ 
+-
+   const attTime = parseHexToTime(recvData.subarray(26,26+6))
++  const inOutStatus = recvData.length > 24 ? recvData.readUInt8(24) : 0
+ 
+-  return { userId, attTime}
++  return { userId, attTime, inOutStatus}
+ 
+ }
+ 

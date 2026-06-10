@@ -75,9 +75,11 @@ class ZKRealtimeManager {
           select: { id: true, name: true, nik: true, departement: true, link_image: true },
         }).catch(() => null);
 
+        const punchType = log.inOutStatus ?? 0;
+
         await prisma.attendance.upsert({
           where: { device_uid_punch_time: { device_uid: deviceUid, punch_time: punchTime } },
-          create: { device_uid: deviceUid, punch_time: punchTime, punch_type: 0, user_id: user?.id ?? null },
+          create: { device_uid: deviceUid, punch_time: punchTime, punch_type: punchType, user_id: user?.id ?? null },
           update: { user_id: user?.id ?? null },
         }).catch(() => {});
 
@@ -85,7 +87,7 @@ class ZKRealtimeManager {
           type: "punch",
           device_uid: deviceUid,
           punch_time: punchTime.toISOString(),
-          punch_type: 0,
+          punch_type: punchType,
           user: user ?? null,
         });
         // Display feed: no PII — only user_id so TV screen can look up its local leaderboard data
