@@ -131,7 +131,8 @@ export default function Employee() {
 
   const setParam = (key, val) => {
     const sp = new URLSearchParams(searchParams.toString());
-    sp.set(key, val); sp.set("page", "1");
+    sp.set(key, val);
+    if (key !== "page") sp.set("page", "1");
     router.push(`?${sp.toString()}`);
   };
 
