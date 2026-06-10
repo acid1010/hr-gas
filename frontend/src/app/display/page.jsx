@@ -335,17 +335,17 @@ export default function Display() {
   }, [ranked.length]);
 
   useEffect(() => {
-    const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime`);
+    const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime-display`);
     es.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
-        if (event.type !== "punch" || !event.user?.id) return;
-        const idx = rankedRef.current.findIndex((emp) => emp.user_id === event.user.id);
+        if (event.type !== "punch" || !event.user_id) return;
+        const idx = rankedRef.current.findIndex((emp) => emp.user_id === event.user_id);
         if (idx === -1) return;
         setFocusIndex(idx);
         setData((prev) =>
           prev.map((emp) =>
-            emp.user_id === event.user.id ? { ...emp, last_punch: event.punch_time } : emp,
+            emp.user_id === event.user_id ? { ...emp, last_punch: event.punch_time } : emp,
           ),
         );
         punchLockRef.current = { until: Date.now() + 30000 };

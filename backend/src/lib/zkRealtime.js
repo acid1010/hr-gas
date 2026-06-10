@@ -8,7 +8,8 @@ const DEVICE_INPORT = 4000;
 
 class ZKRealtimeManager {
   constructor() {
-    this.clients = new Set();
+    this.clients = new Set();        // authenticated (attendance page)
+    this.displayClients = new Set(); // unauthenticated (TV display) — no PII
     this.zk = null;
     this.connected = false;
     this._connecting = false;
@@ -23,12 +24,30 @@ class ZKRealtimeManager {
 
   removeClient(res) {
     this.clients.delete(res);
-    if (this.clients.size === 0) this._disconnect();
+    if (this.clients.size === 0 && this.displayClients.size === 0) this._disconnect();
+  }
+
+  addDisplayClient(res) {
+    this.displayClients.add(res);
+    res.write(`data: ${JSON.stringify({ type: "status", connected: this.connected })}\n\n`);
+    if (!this.connected && !this._connecting) this._connect();
+  }
+
+  removeDisplayClient(res) {
+    this.displayClients.delete(res);
+    if (this.clients.size === 0 && this.displayClients.size === 0) this._disconnect();
   }
 
   _broadcast(data) {
     const payload = `data: ${JSON.stringify(data)}\n\n`;
     for (const res of this.clients) {
+      try { res.write(payload); } catch {}
+    }
+  }
+
+  _broadcastDisplay(data) {
+    const payload = `data: ${JSON.stringify(data)}\n\n`;
+    for (const res of this.displayClients) {
       try { res.write(payload); } catch {}
     }
   }
@@ -62,12 +81,19 @@ class ZKRealtimeManager {
           update: { user_id: user?.id ?? null },
         }).catch(() => {});
 
-        // device_uid (fingerprint device ID) intentionally omitted — not needed by clients
         this._broadcast({
           type: "punch",
+          device_uid: deviceUid,
           punch_time: punchTime.toISOString(),
           punch_type: 0,
           user: user ?? null,
+        });
+        // Display feed: no PII — only user_id so TV screen can look up its local leaderboard data
+        this._broadcastDisplay({
+          type: "punch",
+          punch_time: punchTime.toISOString(),
+          punch_type: 0,
+          user_id: user?.id ?? null,
         });
       });
     } catch (err) {

@@ -73,7 +73,7 @@ router.post("/sync", async (req, res) => {
   }
 });
 
-// GET /attendance/realtime — SSE live punch feed
+// GET /attendance/realtime — SSE live punch feed (authenticated)
 router.get("/realtime", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -82,6 +82,17 @@ router.get("/realtime", (req, res) => {
 
   zkRealtime.addClient(res);
   req.on("close", () => zkRealtime.removeClient(res));
+});
+
+// GET /attendance/realtime-display — SSE for unauthenticated TV display (no PII, user_id only)
+router.get("/realtime-display", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  zkRealtime.addDisplayClient(res);
+  req.on("close", () => zkRealtime.removeDisplayClient(res));
 });
 
 // GET /attendance?date=YYYY-MM-DD&user_id=...&page=1&limit=50

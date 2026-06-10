@@ -69,7 +69,7 @@ app.use("/members", authMiddleware, membersRoutes);
 app.use(
   "/api/attendance",
   (req, res, next) => {
-    if (req.method === "GET" && req.path === "/realtime") return next();
+    if (req.method === "GET" && req.path === "/realtime-display") return next();
     return authMiddleware(req, res, next);
   },
   attendanceRoutes,
