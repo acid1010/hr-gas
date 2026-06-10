@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import { LayoutDashboard, Users, TrendingUp, Clock, CalendarClock, Fingerprint, LogOut, Sun, Moon, Search } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useTheme, useLang } from "./AppProviders";
@@ -48,13 +47,7 @@ export default function Sidebar({ user }) {
       style={{ background: bg, borderRight: `1px solid ${border}` }}
     >
       {/* Brand */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="p-5 shrink-0"
-        style={{ borderBottom: `1px solid ${border}` }}
-      >
+      <div className="sidebar-brand-in p-5 shrink-0" style={{ borderBottom: `1px solid ${border}` }}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0" style={{ boxShadow: "0 0 18px rgba(59,111,212,0.38)" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -69,7 +62,7 @@ export default function Sidebar({ user }) {
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Cmd+K search trigger */}
       <div className="px-3 pt-2 pb-1 shrink-0">
@@ -95,36 +88,25 @@ export default function Sidebar({ user }) {
           {navItems.map(({ href, label, icon: Icon, exact, shortcut, badge }, i) => {
             const active = isActive(href, exact);
             return (
-              <motion.div
+              <div
                 key={href}
-                initial={{ opacity: 0, x: -14 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.055 + 0.1, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-                className="group/nav"
+                className="nav-item-enter group/nav"
+                style={{ animationDelay: `${i * 0.055 + 0.1}s` }}
               >
                 <Link
                   href={href}
                   className="relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors duration-150"
-                  style={{ color: active ? activeText : mutedText, fontWeight: active ? 700 : 500 }}
+                  style={{ color: active ? activeText : mutedText, fontWeight: active ? 700 : 500, background: active ? activeBg : undefined }}
                   onMouseEnter={e => { if (!active) { e.currentTarget.style.background = hoverBg; e.currentTarget.style.color = textColor; } }}
                   onMouseLeave={e => { if (!active) { e.currentTarget.style.background = ""; e.currentTarget.style.color = mutedText; } }}
                 >
-                  {active && (
-                    <motion.div
-                      layoutId="nav-active-pill"
-                      className="absolute inset-0 rounded-xl"
-                      style={{ background: activeBg }}
-                      transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                    />
-                  )}
-
-                  <Icon size={16} className="relative z-10 shrink-0" />
-                  <span className="relative z-10 flex-1">{label}</span>
+                  <Icon size={16} className="shrink-0" />
+                  <span className="flex-1">{label}</span>
 
                   {/* Badge (Soon, Beta, etc.) */}
                   {badge && !active && (
                     <span
-                      className="relative z-10 text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wider uppercase"
+                      className="text-[9px] font-black px-1.5 py-0.5 rounded-md tracking-wider uppercase"
                       style={{ background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.2)" }}
                     >
                       {badge}
@@ -134,7 +116,7 @@ export default function Sidebar({ user }) {
                   {/* Keyboard shortcut hint — visible on hover */}
                   {!badge && !active && shortcut && (
                     <kbd
-                      className="relative z-10 text-[9px] font-black px-1 py-0.5 rounded opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150"
+                      className="text-[9px] font-black px-1 py-0.5 rounded opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150"
                       style={{ background: chipBg, border: `1px solid ${chipBorder}`, color: mutedText }}
                     >
                       {shortcut}
@@ -142,15 +124,10 @@ export default function Sidebar({ user }) {
                   )}
 
                   {active && (
-                    <motion.div
-                      layoutId="nav-active-dot"
-                      className="relative z-10 w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ background: "#5b8df8" }}
-                      transition={{ type: "spring", stiffness: 420, damping: 36 }}
-                    />
+                    <div className="relative z-10 w-1.5 h-1.5 rounded-full shrink-0" style={{ background: "#5b8df8" }} />
                   )}
                 </Link>
-              </motion.div>
+              </div>
             );
           })}
         </div>
