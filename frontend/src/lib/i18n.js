@@ -60,6 +60,7 @@ export const translations = {
       deptBreakdown: "Kehadiran per Departemen",
       workforceComposition: "Komposisi Karyawan",
       today: "Hari Ini",
+      tvDisplay: "Layar TV",
     },
     employee: {
       title: "Karyawan",
@@ -208,6 +209,7 @@ export const translations = {
       deptBreakdown: "Department Attendance",
       workforceComposition: "Workforce Composition",
       today: "Today",
+      tvDisplay: "TV Display",
     },
     employee: {
       title: "Employee",

@@ -6,7 +6,8 @@ const DashboardChart = dynamic(() => import("./_DashboardChart"), { ssr: false, 
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useAppSettings } from "@/lib/useAppSettings";
-import { Users, CalendarCheck, CalendarX, TrendingUp, ArrowUpRight, Medal } from "lucide-react";
+import { Users, CalendarCheck, CalendarX, TrendingUp, ArrowUpRight, Medal, Tv } from "lucide-react";
+import Link from "next/link";
 
 // Circular SVG progress ring
 function ProgressRing({ value, accent, size = 52, stroke = 4 }) {
@@ -206,9 +207,37 @@ export default function Dashboard() {
             <span className="text-[3.5rem] font-black leading-none" style={{ color: p.faint }}>{clock.s}</span>
           </div>
 
-          <div className="text-right hidden xl:block">
-            <p className="text-xs font-bold tracking-[0.22em] uppercase" style={{ color: p.faint }}>HR System</p>
-            <p className="text-sm font-medium mt-0.5" style={{ color: p.muted }}>{t("dashboard.subtitle")}</p>
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-right hidden xl:block">
+              <p className="text-xs font-bold tracking-[0.22em] uppercase" style={{ color: p.faint }}>HR System</p>
+              <p className="text-sm font-medium mt-0.5" style={{ color: p.muted }}>{t("dashboard.subtitle")}</p>
+            </div>
+            <Link
+              href="/display"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-150 cursor-pointer shadow-sm"
+              style={{
+                background: p.cardBg,
+                border: `1px solid ${p.border}`,
+                color: p.muted,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "#5b8df8";
+                e.currentTarget.style.color = "#5b8df8";
+                e.currentTarget.style.background = `${p.primary}12`;
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(91,141,248,0.15)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = p.border;
+                e.currentTarget.style.color = p.muted;
+                e.currentTarget.style.background = p.cardBg;
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <Tv size={14} />
+              <span>{t("dashboard.tvDisplay")}</span>
+            </Link>
           </div>
         </div>
 
