@@ -47,7 +47,7 @@ function isDisplayExcluded(employee) {
 
 function formatAttendanceTime(value) {
   if (!value) return "--:--";
-  return new Date(value).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+  return new Date(value).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":");
 }
 
 function getLocalDateKey(value = new Date()) {
@@ -331,6 +331,7 @@ export default function Display() {
   const activeRef = useRef(true);
   const controllersRef = useRef(new Set());
   const rankedRef = useRef([]);
+  const loadLatestAttendanceRef = useRef(null);
 
   useRefreshCountdown(nextRefreshAt);
   // Only today's latest attendance records are shown on the TV board.
@@ -378,6 +379,7 @@ export default function Display() {
         }
         if (event.type !== "punch" || !event.user_id) return;
         setRealtimeStatus("live");
+        loadLatestAttendanceRef.current?.(event.user_id);
         const idx = rankedRef.current.findIndex((emp) => emp.user_id === event.user_id);
         if (idx === -1 || idx > 5) return;
         setFocusIndex(idx);
@@ -394,7 +396,7 @@ export default function Display() {
   useEffect(() => {
     let intervalId;
 
-    const load = async () => {
+    loadLatestAttendanceRef.current = async (focusUserId = null) => {
       if (inFlightRef.current) return;
 
       const controller = new AbortController();
@@ -421,6 +423,10 @@ export default function Display() {
 
         if (!activeRef.current) return;
         setData(nextData);
+        if (focusUserId) {
+          const idx = nextData.slice(0, 6).findIndex((emp) => emp.user_id === focusUserId);
+          if (idx !== -1) setFocusIndex(idx);
+        }
         setLoaded(true);
         setError("");
       } catch (err) {
@@ -437,18 +443,19 @@ export default function Display() {
     };
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") load();
+      if (document.visibilityState === "visible") loadLatestAttendanceRef.current?.();
     };
 
-    const handleOnline = () => load();
+    const handleOnline = () => loadLatestAttendanceRef.current?.();
 
-    load();
-    intervalId = setInterval(load, REFRESH_INTERVAL);
+    loadLatestAttendanceRef.current();
+    intervalId = setInterval(() => loadLatestAttendanceRef.current?.(), REFRESH_INTERVAL);
     window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       clearInterval(intervalId);
+      loadLatestAttendanceRef.current = null;
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
