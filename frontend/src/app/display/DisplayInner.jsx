@@ -377,6 +377,9 @@ export default function Display() {
     const load = async () => {
       if (inFlightRef.current) return;
 
+      // Fire-and-forget attendance sync so display screen keeps scores fresh
+      fetch(`${apiBaseUrl}/api/attendance/sync`, { method: "POST", cache: "no-store" }).catch(() => {});
+
       const controller = new AbortController();
       controllersRef.current.add(controller);
       inFlightRef.current = true;
