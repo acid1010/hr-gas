@@ -314,7 +314,9 @@ export default function Display() {
   const rankedRef = useRef([]);
 
   useRefreshCountdown(nextRefreshAt);
-  const ranked = [...data].reverse();
+  // Exclude employees with no attendance this month — they skew the bottom section
+  const attending = data.filter(e => e.last_punch !== null);
+  const ranked = [...attending].reverse();
   useEffect(() => { rankedRef.current = ranked; }, [ranked]);
   const activeFocusIndex = ranked.length ? focusIndex % ranked.length : 0;
   const focusEmployee = ranked[activeFocusIndex] || ranked[0] || null;
@@ -334,7 +336,7 @@ export default function Display() {
   // Snap focus to most recently punched employee whenever data changes
   useEffect(() => {
     if (!data.length) return;
-    const r = [...data].reverse();
+    const r = data.filter(e => e.last_punch !== null).reverse();
     let bestIdx = 0;
     let bestTime = null;
     for (let i = 0; i < r.length; i++) {
