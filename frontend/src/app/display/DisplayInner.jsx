@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CalendarDays, Moon, Signal, Sun } from "lucide-react";
+import { Moon, Signal, Sun } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
@@ -18,6 +18,13 @@ const DISPLAY_EXCLUDED_NIKS = new Set([
   "220200008", // Dadanmardani
   "250901139", // Juwandani
 ]);
+
+const MOTIVATIONAL_QUOTES = [
+  "Disiplin kecil setiap hari membangun hasil besar di akhir bulan.",
+  "Datang tepat waktu adalah bentuk hormat pada tim dan pekerjaan.",
+  "Kinerja terbaik dimulai dari kebiasaan yang konsisten.",
+  "Hari kerja yang rapi membuat target produksi lebih mudah dicapai.",
+];
 
 const DEPT_COLORS = {
   production: "#3b6fd4",
@@ -36,6 +43,11 @@ function deptColor(department) {
 
 function isDisplayExcluded(employee) {
   return DISPLAY_EXCLUDED_NIKS.has(String(employee?.nik || "").trim());
+}
+
+function formatAttendanceTime(value) {
+  if (!value) return "--:--";
+  return new Date(value).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
 function getDrivePreview(url) {
@@ -130,25 +142,6 @@ function Avatar({ employee, size = "lg" }) {
   );
 }
 
-function SoftStat({ label, value, helper, icon: Icon, p }) {
-  return (
-    <div className="rounded-2xl border px-4 py-4" style={{ background: p.cardBg, borderColor: p.border }}>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
-          {label}
-        </p>
-        <Icon size={15} style={{ color: p.primary }} />
-      </div>
-      <p className="text-3xl font-black tabular-nums leading-none" style={{ color: p.text }}>
-        {value}
-      </p>
-      <p className="mt-2 text-xs font-semibold" style={{ color: p.muted }}>
-        {helper}
-      </p>
-    </div>
-  );
-}
-
 function ScorePill({ label, value, tone }) {
   return (
     <div className="rounded-2xl px-4 py-3" style={{ background: `${tone}12` }}>
@@ -159,6 +152,39 @@ function ScorePill({ label, value, tone }) {
         {value}
       </p>
     </div>
+  );
+}
+
+function QuotePanel({ quote, p }) {
+  return (
+    <motion.section
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="relative flex min-h-[22rem] overflow-hidden rounded-[2rem] border px-8 py-8"
+      style={{ background: p.cardBg, borderColor: p.border }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 opacity-80"
+        style={{
+          background:
+            "radial-gradient(circle at 84% 20%, rgba(59,111,212,0.16), transparent 34%), radial-gradient(circle at 14% 86%, rgba(22,163,74,0.10), transparent 32%)",
+        }}
+      />
+      <div className="relative flex h-full w-full flex-col justify-between">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em]" style={{ color: p.primary }}>
+            Motivational Quotes
+          </p>
+          <blockquote className="mt-8 max-w-2xl text-4xl font-black leading-[1.05] tracking-[-0.04em]" style={{ color: p.text }}>
+            {quote}
+          </blockquote>
+        </div>
+        <p className="mt-8 max-w-md text-sm font-semibold leading-relaxed" style={{ color: p.muted }}>
+          Ditampilkan otomatis untuk menjaga ritme kerja, kedisiplinan, dan fokus tim produksi.
+        </p>
+      </div>
+    </motion.section>
   );
 }
 
@@ -190,8 +216,8 @@ function FocusCard({ employee, loaded, p }) {
   }
 
   const score = employee.combined_score ?? 0;
-  
   const tone = getScoreTone(score);
+  const attendanceTime = formatAttendanceTime(employee.last_punch);
 
   return (
     <motion.section
@@ -199,7 +225,7 @@ function FocusCard({ employee, loaded, p }) {
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="relative min-h-[28rem] overflow-hidden rounded-3xl border px-8 py-8"
+      className="relative min-h-[22rem] overflow-hidden rounded-[2rem] border px-8 py-8"
       style={{
         background: p.cardBg,
         borderColor: p.border,
@@ -215,7 +241,7 @@ function FocusCard({ employee, loaded, p }) {
         <div className="flex items-center gap-6">
           <Avatar employee={employee} size="lg" />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-6xl font-black leading-none" style={{ color: p.text }}>
+            <h2 className="truncate text-6xl font-black leading-none tracking-[-0.05em]" style={{ color: p.text }}>
               {employee.name}
             </h2>
             <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -230,7 +256,7 @@ function FocusCard({ employee, loaded, p }) {
               </span>
               {employee.last_punch && (
                 <span className="rounded-full px-4 py-2 text-sm font-black tabular-nums" style={{ background: `${tone}15`, color: tone }}>
-                  {new Date(employee.last_punch).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                  {attendanceTime}
                 </span>
               )}
             </div>
@@ -242,10 +268,8 @@ function FocusCard({ employee, loaded, p }) {
             <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
               Jam Absensi
             </p>
-            <p className="mt-4 text-7xl font-black tabular-nums leading-none font-mono" style={{ color: tone }}>
-              {employee.last_punch
-                ? new Date(employee.last_punch).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-                : "—"}
+            <p className="mt-4 text-7xl font-black tabular-nums leading-none font-mono tracking-[-0.08em]" style={{ color: tone }}>
+              {attendanceTime}
             </p>
             <p className="mt-3 text-sm font-semibold" style={{ color: p.muted }}>
               {employee.last_punch
@@ -274,6 +298,7 @@ function FocusCard({ employee, loaded, p }) {
 function RankRow({ employee, rank, p, isFocused }) {
   const score = employee.combined_score ?? 0;
   const tone = getScoreTone(score);
+  const attendanceTime = formatAttendanceTime(employee.last_punch);
 
   return (
     <motion.div
@@ -281,30 +306,30 @@ function RankRow({ employee, rank, p, isFocused }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      className="grid grid-cols-[3rem_auto_1fr_auto] items-center gap-4 rounded-2xl border px-4 py-3"
+      className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-6 rounded-[1.65rem] border px-7 py-5"
       style={{
         background: isFocused ? `${tone}10` : p.cardBg,
         borderColor: isFocused ? `${tone}40` : p.border,
       }}
     >
-      <p className="text-center text-lg font-black tabular-nums" style={{ color: tone }}>
+      <p className="text-center text-3xl font-black tabular-nums tracking-[-0.05em]" style={{ color: tone }}>
         {String(rank).padStart(2, "0")}
       </p>
-      <Avatar employee={employee} size="sm" />
+      <Avatar employee={employee} size="md" />
       <div className="min-w-0">
-        <p className="truncate text-base font-black" style={{ color: p.text }}>
+        <p className="truncate text-3xl font-black tracking-[-0.04em]" style={{ color: p.text }}>
           {employee.name}
         </p>
-        <p className="truncate text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: p.muted }}>
+        <p className="mt-2 truncate text-xl font-black tabular-nums tracking-[0.1em]" style={{ color: p.muted }}>
           {employee.departement || "-"} / {employee.nik || "-"}
         </p>
       </div>
       <div className="text-right">
-        <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: p.muted }}>
-          Skor
+        <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: p.muted }}>
+          Jam Absensi
         </p>
-        <p className="mt-1 text-2xl font-black tabular-nums leading-none" style={{ color: tone }}>
-          {score}
+        <p className="mt-2 text-4xl font-black tabular-nums leading-none tracking-[-0.08em]" style={{ color: tone }}>
+          {attendanceTime}
         </p>
       </div>
     </motion.div>
@@ -337,6 +362,7 @@ export default function Display() {
   const focusEmployee = ranked[activeFocusIndex] || ranked[0] || null;
   const visibleQueue = ranked.slice(0, 6);
   const realtime = realtimeStatusMeta(realtimeStatus);
+  const quote = MOTIVATIONAL_QUOTES[new Date().getDate() % MOTIVATIONAL_QUOTES.length];
 
   useEffect(() => {
     activeRef.current = true;
@@ -468,7 +494,7 @@ export default function Display() {
         }}
       />
 
-      <main className="relative z-10 grid min-h-[calc(100vh-3rem)] grid-rows-[auto_auto_1fr] gap-5">
+      <main className="relative z-10 grid min-h-[calc(100vh-3rem)] w-full max-w-full grid-rows-[auto_1fr] gap-5 overflow-x-hidden">
         <header className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
@@ -525,30 +551,33 @@ export default function Display() {
           </div>
         </header>
 
-        <section className="grid grid-cols-1 gap-4">
-          <SoftStat label="Periode" value={monthLabel} helper={date} icon={CalendarDays} p={p} />
-        </section>
-
-        <section className="grid min-h-0 grid-cols-[1.18fr_0.82fr] gap-5">
-          <div className="min-h-0">
+        <section className="grid min-h-0 grid-flow-dense grid-cols-12 gap-5">
+          <div className="col-span-7 min-h-0">
             <AnimatePresence mode="wait">
               <FocusCard employee={focusEmployee} loaded={loaded} p={p} error={error} />
             </AnimatePresence>
           </div>
 
-          <aside className="flex min-h-0 flex-col rounded-3xl border p-5" style={{ background: p.cardBg, borderColor: p.border }}>
+          <div className="col-span-5 min-h-0">
+            <QuotePanel quote={quote} p={p} />
+          </div>
+
+          <aside className="col-span-12 flex min-h-0 flex-col rounded-[2rem] border p-6" style={{ background: p.cardBg, borderColor: p.border }}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: p.primary }}>
                   Peringkat Terbawah
                 </p>
+                <p className="mt-2 text-2xl font-black tracking-[-0.04em]" style={{ color: p.text }}>
+                  Enam absensi terakhir pada periode berjalan
+                </p>
                 <p className="mt-2 text-sm font-semibold" style={{ color: p.muted }}>
-                  Enam skor terendah pada periode berjalan
+                  {monthLabel} / {date}
                 </p>
               </div>
-              <div className="flex items-center gap-2 rounded-full px-3 py-2" style={{ background: error ? "rgba(220,38,38,0.10)" : "rgba(22,163,74,0.10)" }}>
-                <Signal size={14} style={{ color: error ? "#dc2626" : "#16a34a" }} />
-                <span className="text-xs font-black uppercase tracking-[0.16em]" style={{ color: error ? "#dc2626" : "#16a34a" }}>
+              <div className="flex items-center gap-3 rounded-full px-5 py-4" style={{ background: error ? "rgba(220,38,38,0.10)" : "rgba(22,163,74,0.10)" }}>
+                <Signal size={18} style={{ color: error ? "#dc2626" : "#16a34a" }} />
+                <span className="text-lg font-black uppercase tracking-[0.22em]" style={{ color: error ? "#dc2626" : "#16a34a" }}>
                   {error ? "Offline" : "Online"}
                 </span>
               </div>
@@ -561,7 +590,7 @@ export default function Display() {
               </div>
             ) : null}
 
-            <div className="mt-5 min-h-0 flex-1 space-y-3 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
+            <div className="mt-6 grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
               {visibleQueue.map((employee, index) => {
                 const currentFocusKey = focusEmployee?.user_id || focusEmployee?.nik || focusEmployee?.name;
                 const rowKey = employee.user_id || employee.nik || employee.name;
