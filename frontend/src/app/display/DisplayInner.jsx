@@ -20,10 +20,16 @@ const DISPLAY_EXCLUDED_NIKS = new Set([
 ]);
 
 const MOTIVATIONAL_QUOTES = [
-  "Disiplin kecil setiap hari membangun hasil besar di akhir bulan.",
-  "Datang tepat waktu adalah bentuk hormat pada tim dan pekerjaan.",
-  "Kinerja terbaik dimulai dari kebiasaan yang konsisten.",
-  "Hari kerja yang rapi membuat target produksi lebih mudah dicapai.",
+  "Satu orang terlambat, satu proses bisa ikut terhambat.",
+  "Setiap menit sangat berarti dalam proses produksi.",
+  "Tepat waktu adalah awal dari kerja yang profesional.",
+  "Keterlambatan kecil bisa berdampak besar pada proses kerja.",
+  "Disiplin waktu mencerminkan kualitas kerja.",
+  "Pabrik yang kuat dibangun oleh tim yang disiplin.",
+  "Datang tepat waktu adalah bukti komitmen terhadap pekerjaan.",
+  "Produktivitas dimulai saat kita hadir tepat waktu dan siap bekerja.",
+  "Tepat waktu bukan hanya aturan, tetapi bentuk tanggung jawab.",
+  "Budaya kerja yang baik dimulai dari kebiasaan tepat waktu.",
 ];
 
 const DEPT_COLORS = {
