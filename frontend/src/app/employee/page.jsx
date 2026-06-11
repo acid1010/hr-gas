@@ -109,6 +109,7 @@ export default function Employee() {
   const [isEdit,        setIsEdit]        = useState(false);
   const [localKeyword,  setLocalKeyword]  = useState(keyword);
   const [viewMode,      setViewMode]      = useState("table");
+  const [hoveredId,     setHoveredId]     = useState(null);
   const debounceRef = useRef(null);
 
   // Live debounced search — fires 320ms after last keystroke
@@ -400,10 +401,10 @@ export default function Employee() {
                   return (
                     <div
                       key={emp.id}
-                      className="fade-up group relative rounded-2xl overflow-hidden cursor-default"
+                      className="fade-up relative rounded-2xl overflow-hidden cursor-default"
                       style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: `${i * 0.04}s` }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = `${dc}55`; e.currentTarget.style.boxShadow = `0 8px 32px ${dc}18, 0 0 0 1px ${dc}22`; }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = p.border; e.currentTarget.style.boxShadow = "none"; }}
+                      onMouseEnter={e => { setHoveredId(emp.id); e.currentTarget.style.borderColor = `${dc}55`; e.currentTarget.style.boxShadow = `0 8px 32px ${dc}18, 0 0 0 1px ${dc}22`; }}
+                      onMouseLeave={e => { setHoveredId(null); e.currentTarget.style.borderColor = p.border; e.currentTarget.style.boxShadow = "none"; }}
                     >
                       {/* Dept-colored header band */}
                       <div
@@ -421,7 +422,7 @@ export default function Employee() {
                         {/* edit button top-right */}
                         <button
                           onClick={() => openEdit(emp)}
-                          className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          className={`absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-lg transition-opacity duration-200 ${hoveredId === emp.id ? "opacity-100" : "opacity-0"}`}
                           style={{ background: `${dc}25`, color: dc }}
                           onMouseEnter={e => { e.currentTarget.style.background = `${dc}42`; }}
                           onMouseLeave={e => { e.currentTarget.style.background = `${dc}25`; }}
@@ -506,10 +507,10 @@ export default function Employee() {
               ) : data.length > 0 ? data.map((emp, i) => (
                 <tr
                   key={emp.id}
-                  className="group transition-colors duration-150"
+                  className="transition-colors duration-150"
                   style={{ borderBottom: `1px solid ${p.border}`, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
-                  onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${deptColor(emp.departement)}80`; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; e.currentTarget.style.boxShadow = "none"; }}
+                  onMouseEnter={e => { setHoveredId(emp.id); e.currentTarget.style.background = p.rowHover; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${deptColor(emp.departement)}80`; }}
+                  onMouseLeave={e => { setHoveredId(null); e.currentTarget.style.background = i % 2 === 0 ? p.cardBg : p.rowAlt; e.currentTarget.style.boxShadow = "none"; }}
                 >
                   {/* NIK chip */}
                   <td className="px-5 py-4">
@@ -572,7 +573,7 @@ export default function Employee() {
 
                   {/* Actions — appear on row hover */}
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className={`flex items-center gap-1.5 transition-opacity duration-200 ${hoveredId === emp.id ? "opacity-100" : "opacity-0"}`}>
                       <button
                         onClick={() => openEdit(emp)}
                         title={t("common.edit")}
