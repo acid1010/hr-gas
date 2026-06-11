@@ -142,19 +142,6 @@ function Avatar({ employee, size = "lg" }) {
   );
 }
 
-function ScorePill({ label, value, tone }) {
-  return (
-    <div className="rounded-2xl px-4 py-3" style={{ background: `${tone}12` }}>
-      <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: tone }}>
-        {label}
-      </p>
-      <p className="mt-2 text-2xl font-black leading-none" style={{ color: tone }}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
 function QuotePanel({ quote, p }) {
   return (
     <motion.section
@@ -263,8 +250,8 @@ function FocusCard({ employee, loaded, p }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-[1.15fr_0.85fr] gap-4">
-          <div className="rounded-3xl p-6 flex flex-col justify-between" style={{ background: p.inputBg }}>
+        <div className="rounded-3xl p-6" style={{ background: p.inputBg }}>
+          <div className="flex flex-col justify-between">
             <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
               Jam Absensi
             </p>
@@ -276,18 +263,6 @@ function FocusCard({ employee, loaded, p }) {
                 ? new Date(employee.last_punch).toLocaleDateString("id-ID", { day: "numeric", month: "long" })
                 : "Belum ada absensi"}
             </p>
-          </div>
-
-          <div className="grid gap-3">
-            <ScorePill label="Performa" value={employee.performance_status || "-"} tone={p.primary} />
-            <div className="rounded-2xl px-4 py-3 flex-1" style={{ background: `${p.primary}12` }}>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: p.primary }}>
-                Deskripsi
-              </p>
-              <p className="mt-2 text-sm font-semibold leading-snug" style={{ color: p.text }}>
-                {employee.performance_description || "-"}
-              </p>
-            </div>
           </div>
         </div>
       </div>
