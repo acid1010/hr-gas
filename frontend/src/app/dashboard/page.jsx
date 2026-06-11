@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import dynamic from "next/dynamic";
+const DashboardChart = dynamic(() => import("./_DashboardChart"), { ssr: false, loading: () => <div className="h-[196px]" /> });
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useAppSettings } from "@/lib/useAppSettings";
@@ -16,13 +16,11 @@ function ProgressRing({ value, accent, size = 52, stroke = 4 }) {
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`${accent}18`} strokeWidth={stroke} />
-      <motion.circle
+      <circle
         cx={size / 2} cy={size / 2} r={r} fill="none" stroke={accent} strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={circ}
-        initial={{ strokeDashoffset: circ }}
-        animate={{ strokeDashoffset: circ * (1 - pct) }}
-        transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1], delay: 0.35 }}
+        strokeDashoffset={circ * (1 - pct)}
       />
     </svg>
   );
@@ -48,16 +46,6 @@ function Counter({ to, duration = 1.4 }) {
   return <span ref={ref}>0</span>;
 }
 
-function CustomTooltip({ active, payload, label, bg, text }) {
-  if (!active || !payload?.length) return null;
-  const count = payload[0].value;
-  return (
-    <div style={{ background: bg, border: "1px solid rgba(91,141,248,0.28)", borderRadius: 12, padding: "10px 16px", color: text, fontSize: 12, fontWeight: 700, boxShadow: "0 12px 40px rgba(0,0,0,0.3)" }}>
-      <div style={{ color: "#5b8df8", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}:00 – {label}:59</div>
-      <div style={{ fontSize: 20, fontWeight: 900, color: count > 0 ? text : "#4a5568" }}>{count} <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7a99" }}>punches</span></div>
-    </div>
-  );
-}
 
 const DEPT_COLORS = {
   production: "#3b6fd4", engineering: "#8b5cf6", qc: "#f59e0b",
@@ -87,10 +75,6 @@ function useClock() {
   return t;
 }
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 28, scale: 0.97 },
-  visible: (i) => ({ opacity: 1, y: 0, scale: 1, transition: { delay: i * 0.09, duration: 0.55, ease: [0.22, 1, 0.36, 1] } }),
-};
 
 export default function Dashboard() {
   const { t, p } = useAppSettings();
@@ -200,12 +184,7 @@ export default function Dashboard() {
       <div className="p-8 min-h-screen transition-colors duration-300" style={{ background: p.pageBg }}>
 
         {/* HEADER — Editorial split: date | clock | label */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 flex items-end justify-between gap-6 flex-wrap"
-        >
+        <div className="fade-up mb-8 flex items-end justify-between gap-6 flex-wrap">
           <div>
             <p className="text-xs font-bold tracking-[0.22em] uppercase mb-1.5" style={{ color: p.primary }}>
               PT. Global Anugerah Setia
@@ -231,29 +210,18 @@ export default function Dashboard() {
             <p className="text-xs font-bold tracking-[0.22em] uppercase" style={{ color: p.faint }}>HR System</p>
             <p className="text-sm font-medium mt-0.5" style={{ color: p.muted }}>{t("dashboard.subtitle")}</p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Hairline divider */}
-        <motion.div
-          initial={{ scaleX: 0, originX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 h-px w-full"
-          style={{ background: p.border }}
-        />
+        <div className="fade-up mb-8 h-px w-full" style={{ background: p.border }} />
 
         {/* KPI BENTO — 4 × 1 col, dense, zero gaps */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-          {kpiItems.map(({ label, value, accent, Icon, sub, bar }, i) => (
-            <motion.div
+          {kpiItems.map(({ label, value, accent, Icon, sub, bar }) => (
+            <div
               key={label}
-              custom={i}
-              initial="hidden"
-              animate={loaded ? "visible" : "hidden"}
-              variants={cardVariants}
-              className="group relative overflow-hidden rounded-2xl p-6 flex flex-col justify-between cursor-default transition-all duration-300"
+              className="fade-up group relative overflow-hidden rounded-2xl p-6 flex flex-col justify-between cursor-default transition-all duration-300"
               style={{ background: p.cardBg, border: `1px solid ${p.border}`, minHeight: 148 }}
-              whileHover={{ scale: 1.025, transition: { duration: 0.3, ease: "easeOut" } }}
             >
               {/* Ambient glow */}
               <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full pointer-events-none" style={{ background: accent, opacity: 0.07, filter: "blur(24px)" }} />
@@ -283,18 +251,12 @@ export default function Dashboard() {
                 </div>
                 <p className="text-[10px] font-bold tracking-[0.18em] uppercase" style={{ color: p.faint }}>{label}</p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* LIVE MARQUEE TICKER */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          className="mb-5 overflow-hidden rounded-xl flex items-center"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}`, height: 42 }}
-        >
+        <div className="fade-up mb-5 overflow-hidden rounded-xl flex items-center" style={{ background: p.cardBg, border: `1px solid ${p.border}`, height: 42 }}>
           <div className="shrink-0 flex items-center gap-2 px-4 h-full" style={{ borderRight: `1px solid ${p.border}` }}>
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e", boxShadow: "0 0 6px #22c55e", animation: "pulse 2s ease-in-out infinite" }} />
             <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: "#22c55e" }}>Live</span>
@@ -309,19 +271,13 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* MAIN GRID — 12 cols: chart(7) + spotlight(2) + absent(3) */}
         <div className="grid grid-cols-12 gap-4">
 
           {/* Area Chart — 7 / 12 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 20 }}
-            transition={{ delay: 0.38, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="col-span-12 xl:col-span-7 rounded-2xl overflow-hidden transition-colors duration-300"
-            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-          >
+          <div className="fade-up col-span-12 xl:col-span-7 rounded-2xl overflow-hidden transition-colors duration-300" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
                 {t("dashboard.attendanceChart")}
@@ -332,51 +288,12 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="p-6">
-              <ResponsiveContainer width="100%" height={196}>
-                <AreaChart data={hourlyData} margin={{ top: 4, right: 2, bottom: 0, left: -22 }}>
-                  <defs>
-                    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#5b8df8" stopOpacity={0.32} />
-                      <stop offset="100%" stopColor="#5b8df8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="hour"
-                    tick={{ fill: p.faint, fontSize: 10, fontWeight: 700 }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={v => `${v}h`}
-                  />
-                  <YAxis
-                    tick={{ fill: p.faint, fontSize: 10 }}
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                  />
-                  <Tooltip content={<CustomTooltip bg={p.cardBg} text={p.text} />} />
-                  <ReferenceLine x={String(new Date().getHours()).padStart(2, "0")} stroke="#5b8df8" strokeDasharray="3 3" strokeOpacity={0.4} label={{ value: "Now", position: "top", fill: "#5b8df8", fontSize: 9, fontWeight: 700 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="punches"
-                    stroke="#5b8df8"
-                    strokeWidth={2.5}
-                    fill="url(#areaGrad)"
-                    dot={false}
-                    activeDot={{ r: 5, fill: "#5b8df8", stroke: p.cardBg, strokeWidth: 2 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <DashboardChart data={hourlyData} />
             </div>
-          </motion.div>
+          </div>
 
           {/* Performance Spotlight — 2 / 12 */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 20 }}
-            transition={{ delay: 0.46, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="col-span-12 xl:col-span-2 rounded-2xl flex flex-col overflow-hidden transition-colors duration-300"
-            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-          >
+          <div className="fade-up col-span-12 xl:col-span-2 rounded-2xl flex flex-col overflow-hidden transition-colors duration-300" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
             <div className="px-4 py-3 flex items-center gap-2 shrink-0" style={{ borderBottom: `1px solid ${p.border}` }}>
               <Medal size={12} style={{ color: "#f59e0b" }} />
               <p className="text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>Top Performer</p>
@@ -387,15 +304,7 @@ export default function Dashboard() {
                 <>
                   {/* Pulsing glow avatar */}
                   <div className="relative" style={{ width: 72, height: 72 }}>
-                    <motion.div
-                      className="absolute inset-0 rounded-full"
-                      animate={{ boxShadow: [
-                        "0 0 0 2px #f59e0b44, 0 0 20px #f59e0b18",
-                        "0 0 0 5px #f59e0b66, 0 0 40px #f59e0b30",
-                        "0 0 0 2px #f59e0b44, 0 0 20px #f59e0b18",
-                      ]}}
-                      transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
-                    />
+                    <div className="absolute inset-0 rounded-full" style={{ boxShadow: "0 0 0 2px #f59e0b44, 0 0 20px #f59e0b18" }} />
                     <div
                       className="relative w-full h-full rounded-full overflow-hidden"
                       style={{ background: deptColor(topPerformer.departement) }}
@@ -443,16 +352,10 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </div>
 
           {/* Absent list — 3 / 12 */}
-          <motion.div
-            initial={{ opacity: 0, x: 18 }}
-            animate={{ opacity: loaded ? 1 : 0, x: loaded ? 0 : 18 }}
-            transition={{ delay: 0.5, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="col-span-12 xl:col-span-3 rounded-2xl flex flex-col overflow-hidden transition-colors duration-300"
-            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-          >
+          <div className="fade-up col-span-12 xl:col-span-3 rounded-2xl flex flex-col overflow-hidden transition-colors duration-300" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
             <div className="px-5 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: `1px solid ${p.border}` }}>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
                 {t("dashboard.absentList")}
@@ -473,15 +376,11 @@ export default function Dashboard() {
                   <p className="text-sm font-semibold" style={{ color: p.faint }}>{t("dashboard.allPresent")}</p>
                 </div>
               ) : (
-                <AnimatePresence>
-                  {absentList.map((emp, i) => (
-                    <motion.div
+                <>
+                  {absentList.map((emp) => (
+                    <div
                       key={emp.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      transition={{ delay: i * 0.035, duration: 0.28 }}
-                      className="flex items-center gap-3 px-5 py-3 transition-colors duration-150 cursor-default"
+                      className="fade-up flex items-center gap-3 px-5 py-3 transition-colors duration-150 cursor-default"
                       style={{ borderBottom: `1px solid ${p.border}` }}
                       onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; }}
                       onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
@@ -510,24 +409,18 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="w-2 h-2 rounded-full shrink-0" style={{ background: "#ef4444", boxShadow: "0 0 4px #ef4444" }} />
-                    </motion.div>
+                    </div>
                   ))}
-                </AnimatePresence>
+                </>
               )}
             </div>
-          </motion.div>
+          </div>
 
         </div>
 
         {/* DEPT ATTENDANCE BREAKDOWN */}
         {deptStats.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 18 }}
-            transition={{ delay: 0.6, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-4 rounded-2xl overflow-hidden transition-colors duration-300"
-            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-          >
+          <div className="fade-up mt-4 rounded-2xl overflow-hidden transition-colors duration-300" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
                 {t("dashboard.deptBreakdown")}
@@ -535,17 +428,11 @@ export default function Dashboard() {
               <span className="text-[10px] font-bold" style={{ color: p.faint }}>{t("dashboard.today")}</span>
             </div>
             <div className="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-              {deptStats.map(({ dept, total, present, absent: absCnt, rate }, i) => {
+              {deptStats.map(({ dept, total, present, absent: absCnt, rate }) => {
                 const color = deptColor(dept);
                 const barColor = rate >= 80 ? "#22c55e" : rate >= 60 ? "#f59e0b" : "#ef4444";
                 return (
-                  <motion.div
-                    key={dept}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.045, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex flex-col gap-2"
-                  >
+                  <div key={dept} className="fade-up flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
@@ -558,33 +445,21 @@ export default function Dashboard() {
                     </div>
                     {/* Bar */}
                     <div className="h-1.5 rounded-full overflow-hidden" style={{ background: p.border2 }}>
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{ background: barColor }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${rate}%` }}
-                        transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: i * 0.045 + 0.3 }}
-                      />
+                      <div className="h-full rounded-full" style={{ background: barColor, width: `${rate}%` }} />
                     </div>
                     {absCnt > 0 && (
                       <p className="text-[10px]" style={{ color: "#ef444490" }}>{absCnt} absent</p>
                     )}
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* WORKER TYPE DISTRIBUTION */}
         {workerStats.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: loaded ? 1 : 0, y: loaded ? 0 : 18 }}
-            transition={{ delay: 0.7, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-4 rounded-2xl overflow-hidden transition-colors duration-300"
-            style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-          >
+          <div className="fade-up mt-4 rounded-2xl overflow-hidden transition-colors duration-300" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
             <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
               <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>
                 {t("dashboard.workforceComposition")}
@@ -594,16 +469,13 @@ export default function Dashboard() {
             <div className="px-6 py-5 flex flex-col gap-4">
               {/* Stacked bar */}
               <div className="flex h-5 rounded-full overflow-hidden gap-px">
-                {workerStats.map(({ type, pct }, i) => {
+                {workerStats.map(({ type, pct }) => {
                   const colors = { pkwt: "#5b8df8", borongan: "#f59e0b", magang: "#6b7a99", other: "#4a5568" };
                   return (
-                    <motion.div
+                    <div
                       key={type}
                       className="h-full first:rounded-l-full last:rounded-r-full"
-                      style={{ background: colors[type] || "#4a5568" }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: i * 0.08 + 0.35 }}
+                      style={{ background: colors[type] || "#4a5568", width: `${pct}%` }}
                       title={`${type.toUpperCase()}: ${pct}%`}
                     />
                   );
@@ -626,7 +498,7 @@ export default function Dashboard() {
                 })}
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
 
       </div>
