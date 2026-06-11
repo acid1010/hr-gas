@@ -7,15 +7,16 @@ import { useAppSettings } from "@/lib/useAppSettings";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
-const DISPLAY_EXCLUDED_NAMES = new Set([
-  "pak eka",
-  "pak andri",
-  "pak tajib",
-  "pak dian",
-  "pa dani",
-  "pak asim",
-  "pak catur",
-  "pak dadan",
+const DISPLAY_EXCLUDED_NIKS = new Set([
+  "260101399", // Ekasulaksana
+  "260401535", // Andriarisucipto
+  "250500575", // Andriyantopermana
+  "260101400", // Achmatmustajib
+  "260101401", // Diankurniawan
+  "220300029", // Safuansimabdulah
+  "260201421", // Rahtihcaturprasetyo
+  "220200008", // Dadanmardani
+  "250901139", // Juwandani
 ]);
 
 const DEPT_COLORS = {
@@ -34,7 +35,7 @@ function deptColor(department) {
 }
 
 function isDisplayExcluded(employee) {
-  return DISPLAY_EXCLUDED_NAMES.has((employee?.name || "").trim().toLowerCase());
+  return DISPLAY_EXCLUDED_NIKS.has(String(employee?.nik || "").trim());
 }
 
 function getDrivePreview(url) {
