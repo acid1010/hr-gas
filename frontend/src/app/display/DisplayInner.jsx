@@ -265,21 +265,21 @@ function RankRow({ employee, rank, p, isFocused }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      className="grid grid-cols-[4rem_auto_1fr_auto] items-center gap-6 rounded-[1.65rem] border px-7 py-5"
+      className="grid h-full min-h-0 grid-cols-[3.5rem_auto_1fr_auto] items-center gap-5 rounded-[1.45rem] border px-6 py-3"
       style={{
         background: isFocused ? `${tone}10` : p.cardBg,
         borderColor: isFocused ? `${tone}40` : p.border,
       }}
     >
-      <p className="text-center text-3xl font-black tabular-nums tracking-[-0.05em]" style={{ color: tone }}>
+      <p className="text-center text-2xl font-black tabular-nums tracking-[-0.05em]" style={{ color: tone }}>
         {String(rank).padStart(2, "0")}
       </p>
       <Avatar employee={employee} size="md" />
       <div className="min-w-0">
-        <p className="truncate text-3xl font-black tracking-[-0.04em]" style={{ color: p.text }}>
+        <p className="truncate text-2xl font-black tracking-[-0.04em]" style={{ color: p.text }}>
           {employee.name}
         </p>
-        <p className="mt-2 truncate text-xl font-black tabular-nums tracking-[0.1em]" style={{ color: p.muted }}>
+        <p className="mt-1 truncate text-base font-black tabular-nums tracking-[0.1em]" style={{ color: p.muted }}>
           {employee.departement || "-"} / {employee.nik || "-"}
         </p>
       </div>
@@ -287,7 +287,7 @@ function RankRow({ employee, rank, p, isFocused }) {
         <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: p.muted }}>
           Jam Absensi
         </p>
-        <p className="mt-2 text-4xl font-black tabular-nums leading-none tracking-[-0.08em]" style={{ color: tone }}>
+        <p className="mt-1 text-3xl font-black tabular-nums leading-none tracking-[-0.08em]" style={{ color: tone }}>
           {attendanceTime}
         </p>
       </div>
@@ -549,7 +549,7 @@ export default function Display() {
               </div>
             ) : null}
 
-            <div className="mt-6 grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1" style={{ scrollbarWidth: "none" }}>
+            <div className="mt-5 grid min-h-0 flex-1 grid-rows-6 gap-3 overflow-hidden pr-1" style={{ scrollbarWidth: "none" }}>
               {visibleQueue.map((employee, index) => {
                 const currentFocusKey = focusEmployee?.user_id || focusEmployee?.nik || focusEmployee?.name;
                 const rowKey = employee.user_id || employee.nik || employee.name;
