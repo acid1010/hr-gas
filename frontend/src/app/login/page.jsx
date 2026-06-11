@@ -93,8 +93,8 @@ export default function Login() {
 
             {/* Brand lockup */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black text-white shrink-0" style={{ background: "#3b6fd4" }}>
-                GAS
+              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
+                <img src="/logo.png" alt="PT GAS" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <div>
                 <p className="text-sm font-black tracking-widest uppercase leading-none text-white">
@@ -186,8 +186,8 @@ export default function Login() {
 
               {/* Mobile brand (hidden on lg) */}
               <div className="fade-up flex items-center gap-3 mb-10 lg:hidden">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black text-white" style={{ background: "#3b6fd4" }}>
-                  GAS
+                <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
+                  <img src="/logo.png" alt="PT GAS" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
                 <p className="text-sm font-black tracking-widest uppercase" style={{ color: textColor }}>
                   PT. Global Anugerah Setia
