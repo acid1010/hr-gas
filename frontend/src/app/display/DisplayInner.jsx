@@ -7,6 +7,16 @@ import { useAppSettings } from "@/lib/useAppSettings";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
+const DISPLAY_EXCLUDED_NAMES = new Set([
+  "pak eka",
+  "pak andri",
+  "pak tajib",
+  "pak dian",
+  "pa dani",
+  "pak asim",
+  "pak catur",
+  "pak dadan",
+]);
 
 const DEPT_COLORS = {
   production: "#3b6fd4",
@@ -21,6 +31,10 @@ const DEPT_COLORS = {
 
 function deptColor(department) {
   return DEPT_COLORS[(department || "").toLowerCase()] || "#64748b";
+}
+
+function isDisplayExcluded(employee) {
+  return DISPLAY_EXCLUDED_NAMES.has((employee?.name || "").trim().toLowerCase());
 }
 
 function getDrivePreview(url) {
@@ -397,7 +411,7 @@ export default function Display() {
         if (!response.ok) throw new Error(`Leaderboard request failed: ${response.status}`);
 
         const json = await response.json();
-        const nextData = Array.isArray(json.data) ? json.data : [];
+        const nextData = Array.isArray(json.data) ? json.data.filter((emp) => !isDisplayExcluded(emp)) : [];
 
         if (!activeRef.current) return;
         setData(nextData);
