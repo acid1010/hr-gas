@@ -50,6 +50,26 @@ function formatAttendanceTime(value) {
   return new Date(value).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 }
 
+function getLocalDateKey(value = new Date()) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function mapDisplayAttendance(record) {
+  const user = record.users || {};
+  return {
+    user_id: user.id || record.user_id,
+    name: user.name || "-",
+    nik: user.nik || record.device_uid || "-",
+    departement: user.departement || null,
+    link_image: user.link_image || null,
+    last_punch: record.punch_time,
+    combined_score: 0,
+  };
+}
+
 function getDrivePreview(url) {
   if (!url) return "";
   const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -313,9 +333,9 @@ export default function Display() {
   const rankedRef = useRef([]);
 
   useRefreshCountdown(nextRefreshAt);
-  // Exclude employees with no attendance this month — they skew the bottom section
+  // Only today's latest attendance records are shown on the TV board.
   const attending = data.filter(e => e.last_punch !== null);
-  const ranked = [...attending].reverse();
+  const ranked = attending;
   useEffect(() => { rankedRef.current = ranked; }, [ranked]);
   const activeFocusIndex = ranked.length ? focusIndex % ranked.length : 0;
   const focusEmployee = ranked[activeFocusIndex] || ranked[0] || null;
@@ -336,7 +356,7 @@ export default function Display() {
   // Snap focus to most recently punched employee whenever data changes
   useEffect(() => {
     if (!data.length) return;
-    const r = data.filter(e => e.last_punch !== null).reverse();
+    const r = data.filter(e => e.last_punch !== null);
     let bestIdx = 0;
     let bestTime = null;
     for (let i = 0; i < r.length; i++) {
@@ -389,15 +409,17 @@ export default function Display() {
       }
 
       try {
-        const response = await fetch(`${apiBaseUrl}/api/performance/leaderboard?month=${month}`, {
+        const response = await fetch(`${apiBaseUrl}/api/attendance/display-latest?date=${getLocalDateKey()}&limit=20`, {
           cache: "no-store",
           signal: controller.signal,
         });
 
-        if (!response.ok) throw new Error(`Leaderboard request failed: ${response.status}`);
+        if (!response.ok) throw new Error(`Display attendance request failed: ${response.status}`);
 
         const json = await response.json();
-        const nextData = Array.isArray(json.data) ? json.data.filter((emp) => !isDisplayExcluded(emp)) : [];
+        const nextData = Array.isArray(json.data)
+          ? json.data.map(mapDisplayAttendance).filter((emp) => !isDisplayExcluded(emp))
+          : [];
 
         if (!activeRef.current) return;
         setData(nextData);

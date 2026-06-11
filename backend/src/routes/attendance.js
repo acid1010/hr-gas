@@ -44,6 +44,28 @@ router.get("/realtime-display", (req, res) => {
   req.on("close", () => zkRealtime.removeDisplayClient(res));
 });
 
+// GET /attendance/display-latest?date=YYYY-MM-DD&limit=6 — public TV display feed
+router.get("/display-latest", async (req, res) => {
+  try {
+    const { date, limit = 6 } = req.query;
+    const start = date ? new Date(date) : new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    const records = await prisma.attendance.findMany({
+      where: { punch_time: { gte: start, lt: end }, punch_type: 0, user_id: { not: null } },
+      include: { users: { select: { id: true, nik: true, name: true, departement: true, link_image: true } } },
+      orderBy: { punch_time: "desc" },
+      take: Number(limit),
+    });
+
+    res.status(200).json({ data: records });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
 // GET /attendance?date=YYYY-MM-DD&user_id=...&page=1&limit=50
 router.get("/", async (req, res) => {
   try {

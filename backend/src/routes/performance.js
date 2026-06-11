@@ -3,11 +3,6 @@ const router = express.Router();
 const prisma = require("../../libs/prisma");
 const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
 
-function toClientPunchTime(value) {
-  if (!value) return null;
-  return new Date(value.getTime() - 7 * 60 * 60 * 1000);
-}
-
 router.post("/post", async (req, res) => {
   const { user_id, quarter, status, description } = req.body;
 
@@ -100,7 +95,7 @@ router.get("/leaderboard", async (req, res) => {
         nik: emp.nik,
         departement: emp.departement,
         link_image: emp.link_image || null,
-        last_punch: toClientPunchTime(lastPunchMap[emp.id]),
+        last_punch: lastPunchMap[emp.id] || null,
         attendance_rate: Math.round(attendanceRate * 100),
         performance_status: perf?.status || null,
         performance_description: perf?.description || null,
