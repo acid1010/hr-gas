@@ -159,17 +159,9 @@ function QuotePanel({ quote, p }) {
         }}
       />
       <div className="relative flex h-full w-full flex-col justify-between">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.3em]" style={{ color: p.primary }}>
-            Motivational Quotes
-          </p>
-          <blockquote className="mt-8 max-w-2xl text-4xl font-black leading-[1.05] tracking-[-0.04em]" style={{ color: p.text }}>
-            {quote}
-          </blockquote>
-        </div>
-        <p className="mt-8 max-w-md text-sm font-semibold leading-relaxed" style={{ color: p.muted }}>
-          Ditampilkan otomatis untuk menjaga ritme kerja, kedisiplinan, dan fokus tim produksi.
-        </p>
+        <blockquote className="max-w-2xl text-4xl font-black leading-[1.05] tracking-[-0.04em]" style={{ color: p.text }}>
+          {quote}
+        </blockquote>
       </div>
     </motion.section>
   );
