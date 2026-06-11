@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronDown, X } from "lucide-react";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
@@ -118,14 +117,9 @@ function EmployeePicker({ employees, selected, onSelect, p }) {
       </button>
 
       {/* Dropdown */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute left-0 right-0 z-50 mt-1.5 rounded-2xl overflow-hidden"
+      {open && (
+          <div
+            className="absolute left-0 right-0 z-50 mt-1.5 rounded-2xl overflow-hidden fade-up"
             style={{ background: p.cardBg, border: `1px solid ${p.border}`, boxShadow: "0 16px 48px rgba(0,0,0,0.35)" }}
           >
             {/* Search */}
@@ -148,13 +142,10 @@ function EmployeePicker({ employees, selected, onSelect, p }) {
             <div className="overflow-y-auto" style={{ maxHeight: 260 }}>
               {filtered.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm" style={{ color: p.faint }}>No employees found</div>
-              ) : filtered.map((u, i) => (
-                <motion.button
+              ) : filtered.map((u) => (
+                <button
                   key={u.id}
                   type="button"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.015 }}
                   onClick={() => { onSelect(u); setOpen(false); }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors duration-100"
                   style={{
@@ -183,18 +174,17 @@ function EmployeePicker({ employees, selected, onSelect, p }) {
                   >
                     {(u.departement || "").toUpperCase()}
                   </span>
-                </motion.button>
+                </button>
               ))}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+      )}
     </div>
   );
 }
 
 /* ---- Main form ---- */
-const PerformanceForm = ({ onSubmit }) => {
+const PerformanceForm = () => {
   const { p } = useAppSettings();
   const currentQuarter = String(Math.ceil((new Date().getMonth() + 1) / 3));
   const [employees, setEmployees] = useState([]);
@@ -233,14 +223,11 @@ const PerformanceForm = ({ onSubmit }) => {
         <input type="hidden" name="quarter" value={quarter} required />
         <div className="grid grid-cols-4 gap-2">
           {QUARTERS.map(({ value, label, sub }) => (
-            <motion.button
+            <button
               key={value}
               type="button"
               onClick={() => setQuarter(value)}
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              transition={{ duration: 0.15 }}
-              className="flex flex-col items-center py-2.5 px-1 rounded-xl text-sm font-bold transition-all duration-150"
+              className="flex flex-col items-center py-2.5 px-1 rounded-xl text-sm font-bold transition-all duration-150 active:scale-95 hover:scale-[1.03]"
               style={quarter === value
                 ? { background: "rgba(91,141,248,0.14)", border: "1.5px solid #5b8df8", color: "#5b8df8" }
                 : { background: p.inputBg, border: `1px solid ${p.border2}`, color: p.muted }
@@ -248,7 +235,7 @@ const PerformanceForm = ({ onSubmit }) => {
             >
               <span className="font-black">{label}</span>
               <span className="text-[10px] font-semibold mt-0.5 opacity-70">{sub}</span>
-            </motion.button>
+            </button>
           ))}
         </div>
       </div>
@@ -259,14 +246,11 @@ const PerformanceForm = ({ onSubmit }) => {
         <input type="hidden" name="status" value={status} required />
         <div className="grid grid-cols-2 gap-2">
           {STATUS_OPTIONS.map(({ value, label, color }) => (
-            <motion.button
+            <button
               key={value}
               type="button"
               onClick={() => setStatus(value)}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
-              className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-150"
+              className="flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-150 active:scale-[0.97] hover:scale-[1.02]"
               style={status === value
                 ? { background: `${color}14`, border: `1.5px solid ${color}`, color }
                 : { background: p.inputBg, border: `1px solid ${p.border2}`, color: p.muted }
@@ -274,7 +258,7 @@ const PerformanceForm = ({ onSubmit }) => {
             >
               <span className="w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-150" style={{ background: status === value ? color : p.faint }} />
               {label}
-            </motion.button>
+            </button>
           ))}
         </div>
       </div>

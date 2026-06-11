@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, LayoutDashboard, Users, Fingerprint, TrendingUp, Clock,
   ArrowRight, X, ChevronRight,
@@ -117,25 +116,14 @@ export default function CommandPalette() {
   return (
     <>
       {/* Global trigger hint — also triggered via keyboard */}
-      <AnimatePresence>
         {open && (
-          <motion.div
-            key="cp-backdrop"
+          <div
             className="fixed inset-0 z-[300] flex items-start justify-center pt-[12vh]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            style={{ background: "rgba(0,0,0,0.58)", backdropFilter: "blur(6px)" }}
+            style={{ background: "rgba(0,0,0,0.58)", backdropFilter: "blur(6px)", animation: "page-enter 0.18s ease both" }}
             onClick={() => setOpen(false)}
           >
-            <motion.div
-              key="cp-panel"
-              initial={{ opacity: 0, y: -18, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.97 }}
-              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-              className="relative w-full overflow-hidden rounded-2xl"
+            <div
+              className="relative w-full overflow-hidden rounded-2xl fade-up"
               style={{
                 maxWidth: 560,
                 background: p.cardBg,
@@ -328,10 +316,9 @@ export default function CommandPalette() {
                   {total} result{total !== 1 ? "s" : ""}
                 </span>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
     </>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Cell } from "recharts";
+import dynamic from "next/dynamic";
+const AttendanceChart = dynamic(() => import("./_AttendanceChart"), { ssr: false, loading: () => <div className="h-[148px]" /> });
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { RefreshCw, Wifi, WifiOff, Calendar, Search, FileSpreadsheet, Activity, Users, Clock, Fingerprint, X, CheckCircle, AlertCircle, UserX, UserPlus } from "lucide-react";
@@ -46,21 +46,6 @@ function getDrivePreview(url) {
   return fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=s200` : url;
 }
 
-const rowVariants = {
-  hidden:  { opacity: 0, y: 5 },
-  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.028, duration: 0.32, ease: [0.22, 1, 0.36, 1] } }),
-};
-
-function ChartTooltip({ active, payload, label, bg, text }) {
-  if (!active || !payload?.length) return null;
-  const count = payload[0].value;
-  return (
-    <div style={{ background: bg, border: "1px solid rgba(91,141,248,0.28)", borderRadius: 12, padding: "10px 16px", color: text, fontSize: 12, fontWeight: 700, boxShadow: "0 12px 40px rgba(0,0,0,0.3)" }}>
-      <div style={{ color: "#5b8df8", marginBottom: 4, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase" }}>{label}:00 – {label}:59</div>
-      <div style={{ fontSize: 20, fontWeight: 900, color: count > 0 ? text : "#4a5568" }}>{count} <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7a99" }}>punches</span></div>
-    </div>
-  );
-}
 
 export default function Attendance() {
   const { t, p } = useAppSettings();
@@ -303,11 +288,8 @@ export default function Attendance() {
       <div className="p-8 min-h-screen transition-colors duration-300" style={{ background: p.pageBg }}>
 
         {/* HEADER */}
-        <motion.div
-          initial={{ opacity: 0, y: -18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 flex items-end justify-between gap-6 flex-wrap"
+        <div
+          className="fade-up mb-8 flex items-end justify-between gap-6 flex-wrap"
         >
           <div>
             <p className="text-[10px] font-black tracking-[0.25em] uppercase mb-1.5" style={{ color: p.primary }}>
@@ -342,32 +324,26 @@ export default function Attendance() {
               </div>
             )}
 
-            <motion.button
+            <button
               onClick={() => doSync(false)}
               disabled={syncing}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
               style={{ background: syncing ? "#1e2d52" : "#3b6fd4", cursor: syncing ? "not-allowed" : "pointer" }}
-              whileHover={!syncing ? { scale: 1.02, backgroundColor: "#2f5cb8" } : {}}
-              whileTap={!syncing ? { scale: 0.97 } : {}}
-              transition={{ duration: 0.15 }}
             >
               <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
               {syncing ? t("attendance.syncing") : t("attendance.syncDevice")}
-            </motion.button>
+            </button>
           </div>
-        </motion.div>
+        </div>
 
 
         {/* STAT CHIPS — 4×1 bento, zero gaps */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-5">
           {statItems.map(({ label, value, accent, Icon, isText }, i) => (
-            <motion.div
+            <div
               key={label}
-              initial={{ opacity: 0, y: 14, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ delay: i * 0.07, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="rounded-2xl p-5 flex items-center gap-4 transition-colors duration-300"
-              style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+              className="fade-up rounded-2xl p-5 flex items-center gap-4 transition-colors duration-300"
+              style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: `${i * 0.07}s` }}
             >
               <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent}18` }}>
                 <Icon size={17} style={{ color: accent }} />
@@ -380,17 +356,14 @@ export default function Attendance() {
                   {label}
                 </p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* BAR CHART */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.22, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-2xl mb-5 overflow-hidden transition-colors duration-300"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        <div
+          className="fade-up rounded-2xl mb-5 overflow-hidden transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: "0.22s" }}
         >
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${p.border}` }}>
             <p className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: p.faint }}>{t("attendance.punchesByHour")}</p>
@@ -400,48 +373,14 @@ export default function Attendance() {
             </div>
           </div>
           <div className="px-6 py-5">
-            <ResponsiveContainer width="100%" height={148}>
-              <BarChart data={hourlyData} margin={{ top: 4, right: 0, bottom: 0, left: -28 }}>
-                <defs>
-                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#5b8df8" stopOpacity={1} />
-                    <stop offset="100%" stopColor="#3b6fd4" stopOpacity={0.65} />
-                  </linearGradient>
-                  <linearGradient id="barGradPeak" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7ba5fa" stopOpacity={1} />
-                    <stop offset="100%" stopColor="#5b8df8" stopOpacity={0.8} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="hour" tick={{ fill: p.faint, fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}h`} />
-                <YAxis tick={{ fill: p.faint, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip bg={p.cardBg} text={p.text} />} cursor={{ fill: "rgba(91,141,248,0.07)", radius: 6 }} />
-                <ReferenceLine x={String(new Date().getHours()).padStart(2, "0")} stroke="#5b8df8" strokeDasharray="3 3" strokeOpacity={0.45} />
-                <Bar dataKey="punches" radius={[5, 5, 0, 0]} maxBarSize={28}>
-                  {hourlyData.map((entry, i) => {
-                    const currentHour = String(new Date().getHours()).padStart(2, "0");
-                    const isPeak = entry.punches === Math.max(...hourlyData.map(d => d.punches)) && entry.punches > 0;
-                    const isCurrent = entry.hour === currentHour;
-                    return (
-                      <Cell
-                        key={`cell-${i}`}
-                        fill={isCurrent ? "#5b8df8" : isPeak ? "url(#barGradPeak)" : "url(#barGrad)"}
-                        fillOpacity={isCurrent ? 1 : isPeak ? 0.95 : 0.75}
-                      />
-                    );
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <AttendanceChart data={hourlyData} />
           </div>
-        </motion.div>
+        </div>
 
         {/* TOOLBAR */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28, duration: 0.45 }}
-          className="mb-4 flex flex-wrap items-center gap-3 justify-between p-4 rounded-2xl transition-colors duration-300"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        <div
+          className="fade-up mb-4 flex flex-wrap items-center gap-3 justify-between p-4 rounded-2xl transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: "0.28s" }}
         >
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative">
@@ -456,16 +395,13 @@ export default function Attendance() {
                 onBlur={e =>  { e.target.style.borderColor = p.border2;  e.target.style.boxShadow = "none"; }}
               />
             </div>
-            <motion.button
+            <button
               onClick={() => fetchRecords(1)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
               style={{ background: "#3b6fd4" }}
-              whileHover={{ scale: 1.02, backgroundColor: "#2f5cb8" }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
             >
               <Search size={14} /> {t("common.filter")}
-            </motion.button>
+            </button>
             <button
               onClick={handleDownloadReport}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
@@ -494,11 +430,9 @@ export default function Attendance() {
             ].map(opt => {
               const active = punchTypeFilter === opt.key;
               return (
-                <motion.button
+                <button
                   key={String(opt.key)}
                   onClick={() => setPunchTypeFilter(opt.key)}
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-200"
                   style={{
                     background: active ? opt.bg : p.inputBg,
@@ -508,7 +442,7 @@ export default function Attendance() {
                 >
                   {opt.key !== null && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: opt.color }} />}
                   {opt.label}
-                </motion.button>
+                </button>
               );
             })}
 
@@ -531,7 +465,7 @@ export default function Attendance() {
                 : `${total}`} {t("attendance.records")}
             </span>
           </div>
-        </motion.div>
+        </div>
 
         {/* DEPT FILTER CHIPS */}
         {activeDepts.length > 1 && (
@@ -541,11 +475,9 @@ export default function Attendance() {
               const active = deptFilter === opt.key;
               const color  = opt.key ? deptColor(opt.key) : p.muted;
               return (
-                <motion.button
+                <button
                   key={opt.key}
                   onClick={() => setDeptFilter(opt.key)}
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black transition-all duration-200"
                   style={{
                     background: active ? `${color}22` : p.inputBg,
@@ -555,19 +487,16 @@ export default function Attendance() {
                 >
                   {opt.key && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />}
                   {opt.label}
-                </motion.button>
+                </button>
               );
             })}
           </div>
         )}
 
         {/* TABLE */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.34, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-2xl overflow-hidden transition-colors duration-300"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        <div
+          className="fade-up rounded-2xl overflow-hidden transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: "0.34s" }}
         >
           <table className="w-full text-sm">
             <thead>
@@ -577,21 +506,15 @@ export default function Attendance() {
                 ))}
               </tr>
             </thead>
-            <motion.tbody
-              initial="hidden"
-              animate="visible"
-              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.028 } } }}
-            >
+            <tbody>
               {loading ? (
                 <SkeletonTable rows={10} cols={5} />
               ) : filteredRecords.length > 0 ? filteredRecords.map((rec, i) => {
                 const punch         = punchLabel(rec.punch_type);
                 const isUnregistered = !rec.user_id;
                 return (
-                  <motion.tr
+                  <tr
                     key={rec.id}
-                    custom={i}
-                    variants={rowVariants}
                     className="transition-colors duration-150"
                     style={{ borderBottom: `1px solid ${p.border}`, opacity: isUnregistered ? 0.45 : 1, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
                     onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; e.currentTarget.style.opacity = "1"; }}
@@ -653,7 +576,7 @@ export default function Attendance() {
                         {punch.label}
                       </span>
                     </td>
-                  </motion.tr>
+                  </tr>
                 );
               }) : (
                 <tr>
@@ -664,9 +587,9 @@ export default function Attendance() {
                   </td>
                 </tr>
               )}
-            </motion.tbody>
+            </tbody>
           </table>
-        </motion.div>
+        </div>
 
         {/* PAGINATION */}
         {totalPages > 1 && (
@@ -701,7 +624,7 @@ export default function Attendance() {
                 pg === "…" ? (
                   <span key={`ellipsis-${idx}`} className="w-8 h-8 flex items-center justify-center text-xs" style={{ color: p.faint }}>…</span>
                 ) : (
-                  <motion.button
+                  <button
                     key={pg}
                     onClick={() => fetchRecords(pg)}
                     className="relative w-8 h-8 rounded-xl text-xs font-bold transition-colors"
@@ -710,12 +633,9 @@ export default function Attendance() {
                       color:      pg === currentPage ? "#fff"    : p.faint,
                       border:     `1px solid ${pg === currentPage ? "#3b6fd4" : p.border2}`,
                     }}
-                    whileHover={pg !== currentPage ? { scale: 1.08 } : {}}
-                    whileTap={pg !== currentPage ? { scale: 0.93 } : {}}
-                    transition={{ duration: 0.12 }}
                   >
                     {pg}
-                  </motion.button>
+                  </button>
                 )
               )}
 
@@ -742,18 +662,14 @@ export default function Attendance() {
     </main>
 
     {/* DEVICE USERS DRAWER */}
-    <AnimatePresence>
-      {deviceUsersOpen && (
+    {deviceUsersOpen && (
         <>
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <div
             className="fixed inset-0 z-40"
             style={{ background: "rgba(0,0,0,0.45)" }}
             onClick={() => setDeviceUsersOpen(false)}
           />
-          <motion.aside
-            initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+          <aside
             className="fixed right-0 top-0 bottom-0 z-50 flex flex-col overflow-hidden w-full max-w-2xl"
             style={{ background: p.cardBg, borderLeft: `1px solid ${p.border}` }}
           >
@@ -900,26 +816,19 @@ export default function Attendance() {
                 </div>
               </>
             ) : null}
-          </motion.aside>
+          </aside>
         </>
       )}
-    </AnimatePresence>
 
     {/* IMPORT FROM DEVICE MODAL */}
-    <AnimatePresence>
-      {importForm && (
+    {importForm && (
         <>
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0" style={{ zIndex: 60 }}
-            style={{ background: "rgba(0,0,0,0.55)" }}
+          <div
+            className="fixed inset-0"
+            style={{ zIndex: 60, background: "rgba(0,0,0,0.55)" }}
             onClick={() => !importSaving && setImportForm(null)}
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 16 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 16 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          <div
             className="fixed left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-3xl overflow-hidden"
             style={{ background: p.cardBg, border: `1px solid ${p.border}`, maxHeight: "90vh", zIndex: 61 }}
           >
@@ -958,10 +867,9 @@ export default function Attendance() {
                 {importSaving ? <><span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" /> Menyimpan…</> : <><UserPlus size={14} /> Simpan Pegawai</>}
               </button>
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
     </>
   );
 }
