@@ -72,7 +72,6 @@ app.use(
   "/api/attendance",
   (req, res, next) => {
     if (req.method === "GET" && req.path === "/realtime-display") return next();
-    if (req.method === "POST" && req.path === "/sync") return next();
     return authMiddleware(req, res, next);
   },
   attendanceRoutes,
