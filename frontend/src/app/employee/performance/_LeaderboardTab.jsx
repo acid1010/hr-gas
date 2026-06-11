@@ -2,24 +2,24 @@
 import { Award, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { PerfBadge, ScoreBar, deptColor, getDrivePreview, RANK_COLORS } from "./_shared";
 
-export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, onSort }) {
-  const SortTh = ({ k, children }) => {
-    const active = sortKey === k;
-    const Icon = active ? (sortDir === -1 ? ArrowDown : ArrowUp) : ArrowUpDown;
-    return (
-      <th
-        className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase cursor-pointer select-none"
-        style={{ color: active ? "#5b8df8" : p.faint }}
-        onClick={() => onSort(k)}
-      >
-        <span className="inline-flex items-center gap-1">
-          {children}
-          <Icon size={10} style={{ opacity: active ? 1 : 0.45 }} />
-        </span>
-      </th>
-    );
-  };
+function SortTh({ k, children, sortKey, sortDir, onSort, p }) {
+  const active = sortKey === k;
+  const Icon = active ? (sortDir === -1 ? ArrowDown : ArrowUp) : ArrowUpDown;
+  return (
+    <th
+      className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase cursor-pointer select-none"
+      style={{ color: active ? "#5b8df8" : p.faint }}
+      onClick={() => onSort(k)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {children}
+        <Icon size={10} style={{ opacity: active ? 1 : 0.45 }} />
+      </span>
+    </th>
+  );
+}
 
+export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, onSort }) {
   return (
     <div className="fade-up">
       {/* PODIUM — top 3 */}
@@ -84,9 +84,9 @@ export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, 
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.rank")}</th>
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.employee")}</th>
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.department")}</th>
-              <SortTh k="attendance_rate">{t("performance.columns.attendance")}</SortTh>
+              <SortTh k="attendance_rate" sortKey={sortKey} sortDir={sortDir} onSort={onSort} p={p}>{t("performance.columns.attendance")}</SortTh>
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.perfRating")}</th>
-              <SortTh k="combined_score">{t("performance.columns.combinedScore")}</SortTh>
+              <SortTh k="combined_score" sortKey={sortKey} sortDir={sortDir} onSort={onSort} p={p}>{t("performance.columns.combinedScore")}</SortTh>
             </tr>
           </thead>
           <tbody>
