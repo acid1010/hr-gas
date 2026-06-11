@@ -117,7 +117,7 @@ function useRefreshCountdown(nextRefreshAt) {
 
 function Avatar({ employee, size = "lg" }) {
   const sizes = {
-    lg: "h-28 w-28 text-5xl rounded-2xl",
+    lg: "h-36 w-36 text-6xl rounded-[2rem] ring-4 ring-white/70 shadow-2xl",
     md: "h-14 w-14 text-xl rounded-xl",
     sm: "h-11 w-11 text-base rounded-xl",
   };
@@ -217,7 +217,7 @@ function FocusCard({ employee, loaded, p }) {
       />
 
       <div className="relative flex h-full flex-col justify-between gap-8">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <Avatar employee={employee} size="lg" />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-6xl font-black leading-none tracking-[-0.05em]" style={{ color: p.text }}>
@@ -230,14 +230,6 @@ function FocusCard({ employee, loaded, p }) {
               >
                 {employee.departement || "Departemen"}
               </span>
-              <span className="text-sm font-bold tabular-nums" style={{ color: p.muted }}>
-                NIK {employee.nik || "-"}
-              </span>
-              {employee.last_punch && (
-                <span className="rounded-full px-4 py-2 text-sm font-black tabular-nums" style={{ background: `${tone}15`, color: tone }}>
-                  {attendanceTime}
-                </span>
-              )}
             </div>
           </div>
         </div>
