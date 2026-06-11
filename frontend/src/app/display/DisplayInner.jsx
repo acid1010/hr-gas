@@ -175,19 +175,34 @@ function QuotePanel({ quote, p }) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="relative flex min-h-[22rem] overflow-hidden rounded-[2rem] border px-8 py-8"
-      style={{ background: p.cardBg, borderColor: p.border }}
+      style={{
+        background: `linear-gradient(145deg, ${p.cardBg}, ${p.inputBg})`,
+        borderColor: p.border,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), 0 24px 70px rgba(15,23,42,0.08)",
+      }}
     >
       <div
-        className="pointer-events-none absolute inset-0 opacity-80"
+        className="pointer-events-none absolute inset-0 opacity-90"
         style={{
           background:
-            "radial-gradient(circle at 84% 20%, rgba(59,111,212,0.16), transparent 34%), radial-gradient(circle at 14% 86%, rgba(22,163,74,0.10), transparent 32%)",
+            "radial-gradient(circle at 86% 18%, rgba(59,111,212,0.18), transparent 34%), radial-gradient(circle at 10% 90%, rgba(220,38,38,0.08), transparent 34%)",
         }}
       />
-      <div className="relative flex h-full w-full flex-col justify-between">
-        <blockquote className="max-w-2xl text-4xl font-black leading-[1.05] tracking-[-0.04em]" style={{ color: p.text }}>
-          {quote}
-        </blockquote>
+      <div className="pointer-events-none absolute right-8 top-8 flex gap-2 opacity-25">
+        {[0, 1, 2, 3, 4].map((line) => (
+          <span key={line} className="block h-16 w-1 rounded-full" style={{ background: p.primary }} />
+        ))}
+      </div>
+      <div className="relative grid h-full w-full grid-cols-[auto_1fr] items-center gap-7">
+        <div className="h-full w-2 rounded-full" style={{ background: p.primary }} />
+        <div className="relative flex min-h-64 items-center">
+          <span className="absolute -left-2 -top-10 font-serif text-[9rem] font-black leading-none opacity-10" style={{ color: p.primary }}>
+            “
+          </span>
+          <blockquote className="relative max-w-2xl text-5xl font-black leading-[1.03] tracking-[-0.055em] text-balance" style={{ color: p.text }}>
+            {quote}
+          </blockquote>
+        </div>
       </div>
     </motion.section>
   );
