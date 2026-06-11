@@ -6,7 +6,7 @@ import { Moon, Signal, Sun } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import apiBaseUrl from "@/lib/urlEndPoint";
 
-const REFRESH_INTERVAL = 5 * 60 * 1000;
+const REFRESH_INTERVAL = 3 * 60 * 1000;
 const DISPLAY_EXCLUDED_NIKS = new Set([
   "260101399", // Ekasulaksana
   "260401535", // Andriarisucipto
@@ -337,9 +337,9 @@ export default function Display() {
   const attending = data.filter(e => e.last_punch !== null);
   const ranked = attending;
   useEffect(() => { rankedRef.current = ranked; }, [ranked]);
-  const activeFocusIndex = ranked.length ? focusIndex % ranked.length : 0;
-  const focusEmployee = ranked[activeFocusIndex] || ranked[0] || null;
   const visibleQueue = ranked.slice(0, 6);
+  const activeFocusIndex = visibleQueue.length ? focusIndex % visibleQueue.length : 0;
+  const focusEmployee = visibleQueue[activeFocusIndex] || visibleQueue[0] || null;
   const realtime = realtimeStatusMeta(realtimeStatus);
   const quote = MOTIVATIONAL_QUOTES[new Date().getDate() % MOTIVATIONAL_QUOTES.length];
 
@@ -353,19 +353,17 @@ export default function Display() {
     };
   }, []);
 
-  // Snap focus to most recently punched employee whenever data changes
   useEffect(() => {
-    if (!data.length) return;
-    const r = data.filter(e => e.last_punch !== null);
-    let bestIdx = 0;
-    let bestTime = null;
-    for (let i = 0; i < r.length; i++) {
-      if (!r[i].last_punch) continue;
-      const t = new Date(r[i].last_punch).getTime();
-      if (bestTime === null || t > bestTime) { bestTime = t; bestIdx = i; }
-    }
-    setFocusIndex(bestIdx);
-  }, [data]);
+    if (visibleQueue.length && focusIndex >= visibleQueue.length) setFocusIndex(0);
+  }, [focusIndex, visibleQueue.length]);
+
+  useEffect(() => {
+    if (visibleQueue.length <= 1) return undefined;
+    const id = setInterval(() => {
+      setFocusIndex((current) => (current + 1) % visibleQueue.length);
+    }, REFRESH_INTERVAL);
+    return () => clearInterval(id);
+  }, [visibleQueue.length]);
 
   useEffect(() => {
     const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime-display`);
@@ -381,7 +379,7 @@ export default function Display() {
         if (event.type !== "punch" || !event.user_id) return;
         setRealtimeStatus("live");
         const idx = rankedRef.current.findIndex((emp) => emp.user_id === event.user_id);
-        if (idx === -1) return;
+        if (idx === -1 || idx > 5) return;
         setFocusIndex(idx);
         setData((prev) =>
           prev.map((emp) =>
