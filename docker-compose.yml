@@ -1,20 +1,4 @@
-version: "3.9"
-
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: hr-postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: hr
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      - "5432:5432"
-
   redis:
     image: redis:7-alpine
     container_name: hr-redis
@@ -30,10 +14,9 @@ services:
     container_name: hr-backend
     restart: unless-stopped
     depends_on:
-      - postgres
       - redis
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@postgres:5432/hr?sslmode=disable
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:changeme@host.docker.internal:5432/hr?sslmode=disable}
       PORT: 3041
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH: ${JWT_REFRESH}
@@ -58,6 +41,3 @@ services:
       JWT_SECRET: ${JWT_SECRET}
     ports:
       - "3040:3000"
-
-volumes:
-  postgres_data:

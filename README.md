@@ -13,12 +13,12 @@ Supporting services:
 
 | Service | Purpose |
 | --- | --- |
-| PostgreSQL | Main database |
+| Local PostgreSQL | Main database, running outside Docker |
 | Redis | Backend startup dependency and session/cache support |
 
-## Quick Start With Docker
+## Quick Start With Docker Backend/Frontend
 
-Docker is the recommended setup for running the full system.
+Docker runs Redis, backend, and frontend. PostgreSQL runs locally on the host so database data is not tied to Docker container or volume lifecycle.
 
 ### 1. Create Root Environment File
 
@@ -31,7 +31,7 @@ cp .env.example .env
 If `.env.example` is not present, create `.env` manually:
 
 ```env
-POSTGRES_PASSWORD=changeme
+DATABASE_URL=postgresql://postgres:changeme@host.docker.internal:5432/hr?sslmode=disable
 REDIS_PASSWORD=changeme
 JWT_SECRET=change-this-to-a-random-secret
 JWT_REFRESH=change-this-to-another-random-secret
@@ -46,7 +46,17 @@ For production or LAN access, set `API_URL` to the backend URL that the browser 
 API_URL=http://192.168.1.50:3041
 ```
 
-### 2. Build And Start
+### 2. Prepare Local PostgreSQL
+
+Create the local database if it does not exist:
+
+```bash
+createdb hr
+```
+
+If your local PostgreSQL uses a different user, password, host, or port, update `DATABASE_URL` in root `.env` before starting Docker.
+
+### 3. Build And Start
 
 ```bash
 docker compose up -d --build
@@ -62,24 +72,24 @@ Expected containers:
 
 | Container | Purpose |
 | --- | --- |
-| `hr-postgres` | PostgreSQL |
 | `hr-redis` | Redis |
 | `hr-backend` | Express API |
 | `hr-frontend` | Next.js app |
 
-### 3. Apply Database Migrations
+### 4. Apply Database Migrations
 
-Run migrations after the first database startup:
+Run migrations against local PostgreSQL after the first database startup:
 
 ```bash
-docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260605_add_attendance/migration.sql
-docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260607_overtime_module/migration.sql
-docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260608_shift_calendar/migration.sql
+psql "$DATABASE_URL" < backend/prisma/migrations/20260605_add_attendance/migration.sql
+psql "$DATABASE_URL" < backend/prisma/migrations/20260607_overtime_module/migration.sql
+psql "$DATABASE_URL" < backend/prisma/migrations/20260608_shift_calendar/migration.sql
+psql "$DATABASE_URL" < backend/prisma/migrations/20260609_fix_attendance_timezone/migration.sql
 ```
 
 Warning: `20260607_overtime_module` drops old legacy overtime tables before creating the newer overtime request tables. Review it first if the database already contains real overtime data.
 
-### 4. Open The App
+### 5. Open The App
 
 Frontend:
 
@@ -103,14 +113,20 @@ http://localhost:3041
 
 ## Default Login
 
-Fresh Docker databases are seeded from `init.sql`.
+Fresh databases can be seeded from `init.sql`.
 
 | Field | Value |
 | --- | --- |
 | Username | `mdata` |
 | Password | `gasjaya` |
 
-If your database volume existed before the seed was added, create an admin user manually or reset the database volume.
+To seed an empty local database, run:
+
+```bash
+psql "$DATABASE_URL" < init.sql
+```
+
+If your database already has data, review `init.sql` before applying it.
 
 ## Daily Docker Commands
 
@@ -145,18 +161,18 @@ Follow backend and frontend logs:
 docker compose logs -f backend frontend
 ```
 
-Reset all Docker data, including the database:
+Reset Docker services:
 
 ```bash
 docker compose down -v
 docker compose up -d --build
 ```
 
-After a reset, apply migrations again.
+This does not reset local PostgreSQL data.
 
 ## Manual Development Setup
 
-Use manual setup only when developing without Docker.
+Use manual setup when developing without Docker.
 
 ### Backend
 
@@ -250,7 +266,7 @@ docker compose up -d frontend
 Apply the shift calendar migration:
 
 ```bash
-docker exec -i hr-postgres psql -U postgres -d hr < backend/prisma/migrations/20260608_shift_calendar/migration.sql
+psql "$DATABASE_URL" < backend/prisma/migrations/20260608_shift_calendar/migration.sql
 ```
 
 If other module tables are missing, apply all migrations in order from the Docker setup section.
@@ -294,7 +310,7 @@ Set strong values for:
 ```env
 JWT_SECRET=...
 JWT_REFRESH=...
-POSTGRES_PASSWORD=...
+DATABASE_URL=...
 REDIS_PASSWORD=...
 ```
 
