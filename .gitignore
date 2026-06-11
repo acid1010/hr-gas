@@ -1,7 +1,19 @@
 node_modules
 .pm2-backend-hr
+.DS_Store
+.claude/
+
 # Keep environment variables out of version control
 .env
 
 /src/generated/prisma
+backend/src/generated/
 backend/public/uploads/
+backend/dump.rdb
+backups/
+
+# Local planning/scratch docs
+AGENTS.md
+docs/.DS_Store
+docs/README.md
+docs/superpowers/plans/
