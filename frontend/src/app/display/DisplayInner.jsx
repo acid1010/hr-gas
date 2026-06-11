@@ -235,11 +235,11 @@ function FocusCard({ employee, loaded, p }) {
         </div>
 
         <div className="rounded-3xl p-6" style={{ background: p.inputBg }}>
-          <div className="flex flex-col justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: p.muted }}>
+          <div className="flex min-h-52 flex-col items-center justify-center text-center">
+            <p className="text-2xl font-black uppercase tracking-[0.26em]" style={{ color: p.muted }}>
               Jam Absensi
             </p>
-            <p className="mt-4 text-7xl font-black tabular-nums leading-none font-mono tracking-[-0.08em]" style={{ color: tone }}>
+            <p className="mt-6 text-8xl font-black tabular-nums leading-none font-mono tracking-[-0.08em]" style={{ color: tone }}>
               {attendanceTime}
             </p>
             <p className="mt-3 text-sm font-semibold" style={{ color: p.muted }}>
