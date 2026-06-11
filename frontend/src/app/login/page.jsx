@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import { useTheme } from "../components/AppProviders";
 import { useLang } from "../components/AppProviders";
@@ -17,15 +16,6 @@ const STATS = [
   "Enterprise HR Platform",
 ];
 
-const formVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.075 } },
-};
-const itemVariants = {
-  hidden:   { opacity: 0, y: 18 },
-  visible:  { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
-};
-
 export default function Login() {
   const { isDark, toggleTheme } = useTheme();
   const { lang, toggleLang } = useLang();
@@ -35,7 +25,6 @@ export default function Login() {
 
   // Palette
   const pageBg    = isDark ? "#0b0d14"                    : "#f0f2f7";
-  const cardBg    = isDark ? "#10131c"                    : "#ffffff";
   const inputBg   = isDark ? "#0d0f18"                    : "#f4f6fb";
   const border    = isDark ? "rgba(255,255,255,0.07)"     : "rgba(0,0,0,0.08)";
   const inBorder  = isDark ? "rgba(255,255,255,0.09)"     : "rgba(0,0,0,0.1)";
@@ -72,11 +61,8 @@ export default function Login() {
       <div className="flex min-h-screen w-full transition-colors duration-300" style={{ background: pageBg }}>
 
         {/* LEFT PANEL — atmospheric editorial split */}
-        <motion.div
-          initial={{ opacity: 0, x: -40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.85, ease: [0.22, 1, 0.36, 1] }}
-          className="hidden lg:flex lg:w-[58%] xl:w-[60%] relative flex-col overflow-hidden"
+        <div
+          className="fade-up hidden lg:flex lg:w-[58%] xl:w-[60%] relative flex-col overflow-hidden"
           style={{ background: "#060810" }}
         >
           {/* Atmospheric background */}
@@ -164,7 +150,7 @@ export default function Login() {
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* RIGHT PANEL — login form */}
         <div className="flex-1 flex flex-col relative">
@@ -193,41 +179,35 @@ export default function Login() {
 
           {/* Centered form */}
           <div className="flex-1 flex items-center justify-center px-8 py-20">
-            <motion.div
-              className="w-full"
+            <div
+              className="fade-up w-full"
               style={{ maxWidth: 388 }}
-              initial="hidden"
-              animate="visible"
-              variants={formVariants}
             >
 
               {/* Mobile brand (hidden on lg) */}
-              <motion.div variants={itemVariants} className="flex items-center gap-3 mb-10 lg:hidden">
+              <div className="fade-up flex items-center gap-3 mb-10 lg:hidden">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-black text-white" style={{ background: "#3b6fd4" }}>
                   GAS
                 </div>
                 <p className="text-sm font-black tracking-widest uppercase" style={{ color: textColor }}>
                   PT. Global Anugerah Setia
                 </p>
-              </motion.div>
+              </div>
 
               {/* Page heading */}
-              <motion.div variants={itemVariants} className="mb-9">
+              <div className="fade-up mb-9">
                 <h1 className="text-[2.4rem] font-black tracking-tight leading-none mb-2.5" style={{ color: textColor }}>
                   {t(lang, "login.title")}
                 </h1>
                 <p className="text-sm leading-relaxed" style={{ color: muted }}>
                   {t(lang, "login.subtitle")}
                 </p>
-              </motion.div>
+              </div>
 
               {/* Inline error */}
               {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mb-6 px-4 py-3 rounded-xl text-sm font-medium"
+                <div
+                  className="fade-up mb-6 px-4 py-3 rounded-xl text-sm font-medium"
                   style={{
                     background: "rgba(239,68,68,0.07)",
                     border: "1px solid rgba(239,68,68,0.22)",
@@ -235,14 +215,14 @@ export default function Login() {
                   }}
                 >
                   {error}
-                </motion.div>
+                </div>
               )}
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
                 {/* Username */}
-                <motion.div variants={itemVariants} className="flex flex-col gap-2">
+                <div className="fade-up flex flex-col gap-2">
                   <label className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: labelClr }}>
                     {t(lang, "login.username")}
                   </label>
@@ -257,10 +237,10 @@ export default function Login() {
                     onFocus={e => { e.target.style.borderColor = "#5b8df8"; e.target.style.boxShadow = "0 0 0 3px rgba(91,141,248,0.11)"; }}
                     onBlur={e =>  { e.target.style.borderColor = inBorder;   e.target.style.boxShadow = "none"; }}
                   />
-                </motion.div>
+                </div>
 
                 {/* Password */}
-                <motion.div variants={itemVariants} className="flex flex-col gap-2">
+                <div className="fade-up flex flex-col gap-2">
                   <label className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: labelClr }}>
                     {t(lang, "login.password")}
                   </label>
@@ -287,18 +267,15 @@ export default function Login() {
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Submit */}
-                <motion.div variants={itemVariants} className="pt-1">
-                  <motion.button
+                <div className="fade-up pt-1">
+                  <button
                     type="submit"
                     disabled={loading}
                     className="w-full py-3.5 rounded-xl text-sm font-black tracking-wide text-white flex items-center justify-center gap-2"
                     style={{ background: "#3b6fd4", cursor: loading ? "not-allowed" : "pointer" }}
-                    whileHover={!loading ? { scale: 1.012, backgroundColor: "#2f5cb8" } : {}}
-                    whileTap={!loading ? { scale: 0.988 } : {}}
-                    transition={{ duration: 0.18 }}
                   >
                     {loading ? (
                       <>
@@ -314,16 +291,16 @@ export default function Login() {
                         <ArrowRight size={16} />
                       </>
                     )}
-                  </motion.button>
-                </motion.div>
+                  </button>
+                </div>
               </form>
 
               {/* Footer */}
-              <motion.p variants={itemVariants} className="mt-9 text-center text-xs" style={{ color: muted }}>
+              <p className="fade-up mt-9 text-center text-xs" style={{ color: muted }}>
                 {t(lang, "login.footer")}
-              </motion.p>
+              </p>
 
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>

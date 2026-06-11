@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import { Plus, Pencil, Trash2, Clock, CalendarDays, Grid3x3 } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import fetchWithAuth from "@/lib/fetchWithAuth";

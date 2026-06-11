@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import fetchWithAuth from "@/lib/fetchWithAuth";
@@ -28,15 +27,13 @@ function EmployeeCard({ emp, index }) {
   const globalRank = index + 1;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -24 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: (index % ITEMS_PER_PAGE) * 0.055, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex items-center overflow-hidden rounded-2xl h-full"
+    <div
+      className="fade-up relative flex items-center overflow-hidden rounded-2xl h-full"
       style={{
         background: "rgba(255,255,255,0.025)",
         border: "1px solid rgba(239,68,68,0.18)",
         boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+        animationDelay: `${(index % ITEMS_PER_PAGE) * 0.055}s`,
       }}
     >
       {/* Left rank stripe */}
@@ -113,7 +110,7 @@ function EmployeeCard({ emp, index }) {
           Worst
         </span>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -240,32 +237,25 @@ export default function DashboardTV() {
 
       {/* CONTENT */}
       <main className="relative z-10 flex-1 min-h-0 px-8 py-6 flex flex-col gap-3">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={page}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-1 min-h-0 grid gap-3"
-            style={{ gridTemplateRows: `repeat(${ITEMS_PER_PAGE}, 1fr)` }}
-          >
-            {current.map((emp, i) => (
-              <EmployeeCard key={emp.id} emp={emp} index={page * ITEMS_PER_PAGE + i} />
-            ))}
-            {loaded && current.length === 0 && (
-              <div
-                className="row-span-5 flex flex-col items-center justify-center gap-4 rounded-3xl"
-                style={{ border: "1px dashed rgba(255,255,255,0.06)", gridRow: `span ${ITEMS_PER_PAGE}` }}
-              >
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)" }}>
-                  <AlertTriangle size={28} style={{ color: "#4a5568" }} />
-                </div>
-                <p className="text-base font-black uppercase tracking-widest" style={{ color: "#4a5568" }}>No worst performers found</p>
+        <div
+          className="fade-up flex-1 min-h-0 grid gap-3"
+          style={{ gridTemplateRows: `repeat(${ITEMS_PER_PAGE}, 1fr)` }}
+        >
+          {current.map((emp, i) => (
+            <EmployeeCard key={emp.id} emp={emp} index={page * ITEMS_PER_PAGE + i} />
+          ))}
+          {loaded && current.length === 0 && (
+            <div
+              className="row-span-5 flex flex-col items-center justify-center gap-4 rounded-3xl"
+              style={{ border: "1px dashed rgba(255,255,255,0.06)", gridRow: `span ${ITEMS_PER_PAGE}` }}
+            >
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+                <AlertTriangle size={28} style={{ color: "#4a5568" }} />
               </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+              <p className="text-base font-black uppercase tracking-widest" style={{ color: "#4a5568" }}>No worst performers found</p>
+            </div>
+          )}
+        </div>
       </main>
 
       {/* PAGINATION */}
@@ -295,12 +285,11 @@ export default function DashboardTV() {
 
           <div className="flex items-center gap-2">
             {Array.from({ length: pages }).map((_, i) => (
-              <motion.button
+              <button
                 key={i}
                 onClick={() => setPage(i)}
                 className="rounded-full transition-all duration-300"
-                animate={{ width: i === page ? 28 : 8, background: i === page ? "#ef4444" : "rgba(255,255,255,0.15)" }}
-                style={{ height: 8 }}
+                style={{ height: 8, width: i === page ? 28 : 8, background: i === page ? "#ef4444" : "rgba(255,255,255,0.15)" }}
               />
             ))}
           </div>

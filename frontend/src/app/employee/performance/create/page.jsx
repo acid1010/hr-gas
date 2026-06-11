@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import PerformanceForm from "@/app/components/forms/PerformanceForm";
@@ -39,11 +38,8 @@ export default function PerformanceCreatePage() {
       <div className="p-8 min-h-screen transition-colors duration-300" style={{ background: p.pageBg }}>
 
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 flex items-center gap-4"
+        <div
+          className="fade-up mb-8 flex items-center gap-4"
         >
           <button
             onClick={() => router.back()}
@@ -62,15 +58,12 @@ export default function PerformanceCreatePage() {
               Add Record
             </h1>
           </div>
-        </motion.div>
+        </div>
 
         {/* Form card */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="max-w-lg rounded-2xl overflow-hidden transition-colors duration-300"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        <div
+          className="fade-up max-w-lg rounded-2xl overflow-hidden transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: "0.1s" }}
         >
           <div className="px-6 py-4 shrink-0" style={{ borderBottom: `1px solid ${p.border}` }}>
             <p className="text-sm font-bold" style={{ color: p.muted }}>Fill in the employee performance data for the quarter</p>
@@ -78,19 +71,16 @@ export default function PerformanceCreatePage() {
 
           <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
             <PerformanceForm />
-            <motion.button
+            <button
               type="submit"
               disabled={saving}
               className="w-full py-3 rounded-xl text-sm font-black text-white mt-2"
               style={{ background: saving ? "#1e2d52" : "#3b6fd4", cursor: saving ? "not-allowed" : "pointer" }}
-              whileHover={!saving ? { scale: 1.012, backgroundColor: "#2f5cb8" } : {}}
-              whileTap={!saving ? { scale: 0.985 } : {}}
-              transition={{ duration: 0.15 }}
             >
               {saving ? "Saving…" : "Save Record"}
-            </motion.button>
+            </button>
           </form>
-        </motion.div>
+        </div>
 
       </div>
     </main>

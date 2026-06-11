@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
 import EmployeeForm from "../components/forms/EmployeeForm";
@@ -61,15 +60,14 @@ function DeleteButton({ label, confirmLabel, onConfirm }) {
   const [confirming, setConfirming] = useState(false);
   if (confirming) {
     return (
-      <motion.button
-        initial={{ scale: 0.9 }} animate={{ scale: 1 }}
+      <button
         onClick={() => { setConfirming(false); onConfirm(); }}
         onMouseLeave={() => setConfirming(false)}
         className="px-2.5 py-1 rounded-lg text-[11px] font-black text-white"
         style={{ background: "#ef4444" }}
       >
         {confirmLabel}
-      </motion.button>
+      </button>
     );
   }
   return (
@@ -93,11 +91,6 @@ function tenureLabel(dateStr) {
   if (months < 12) return `${months}mo`;
   return `${Math.floor(months / 12)}yr`;
 }
-
-const rowVariants = {
-  hidden:  { opacity: 0, y: 5 },
-  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.032, duration: 0.32, ease: [0.22, 1, 0.36, 1] } }),
-};
 
 export default function Employee() {
   const { t, p } = useAppSettings();
@@ -246,11 +239,8 @@ export default function Employee() {
       <div className="p-8 min-h-screen transition-colors duration-300" style={{ background: p.pageBg }}>
 
         {/* PAGE HEADER */}
-        <motion.div
-          initial={{ opacity: 0, y: -18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-8 flex items-end justify-between gap-6 flex-wrap"
+        <div
+          className="fade-up mb-8 flex items-end justify-between gap-6 flex-wrap"
         >
           {/* Title + count chips */}
           <div className="flex items-end gap-5 flex-wrap">
@@ -277,16 +267,13 @@ export default function Employee() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2">
-            <motion.button
+            <button
               onClick={openCreate}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white"
               style={{ background: "#3b6fd4" }}
-              whileHover={{ scale: 1.02, backgroundColor: "#2f5cb8" }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.15 }}
             >
               <Plus size={15} /> {t("common.create")}
-            </motion.button>
+            </button>
             <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
@@ -306,16 +293,13 @@ export default function Employee() {
               <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
             </label>
           </div>
-        </motion.div>
+        </div>
 
 
         {/* TOOLBAR */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-4 flex flex-wrap items-center gap-3 p-4 rounded-2xl transition-colors duration-300"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        <div
+          className="fade-up mb-4 flex flex-wrap items-center gap-3 p-4 rounded-2xl transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: "0.1s" }}
         >
           <div className="relative">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: p.faint }} />
@@ -367,7 +351,7 @@ export default function Employee() {
             {Object.entries(DEPT_COLORS).map(([dept, color]) => {
               const active = keyword.toLowerCase() === dept;
               return (
-                <motion.button
+                <button
                   key={dept}
                   type="button"
                   onClick={() => {
@@ -377,9 +361,6 @@ export default function Employee() {
                     sp.set("keyword", next); sp.set("page", "1");
                     router.push(`?${sp.toString()}`);
                   }}
-                  whileHover={{ scale: 1.06 }}
-                  whileTap={{ scale: 0.94 }}
-                  transition={{ duration: 0.12 }}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wide transition-all duration-150"
                   style={active
                     ? { background: `${color}22`, border: `1.5px solid ${color}`, color }
@@ -388,24 +369,17 @@ export default function Employee() {
                 >
                   <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? color : p.faint }} />
                   {dept}
-                </motion.button>
+                </button>
               );
             })}
           </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* TABLE / GRID */}
-        <AnimatePresence mode="wait">
         {viewMode === "grid" ? (
           /* ---- CARD GRID VIEW ---- */
-          <motion.div
-            key="grid"
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          >
+          <div className="fade-up">
             {loading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                 {Array.from({ length: limit }).map((_, i) => (
@@ -424,15 +398,10 @@ export default function Employee() {
                 {data.map((emp, i) => {
                   const dc = deptColor(emp.departement);
                   return (
-                    <motion.div
+                    <div
                       key={emp.id}
-                      initial={{ opacity: 0, scale: 0.94, y: 18 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ delay: i * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                      className="group relative rounded-2xl overflow-hidden cursor-default"
-                      style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
-                      whileHover={{ scale: 1.018, transition: { duration: 0.2, ease: "easeOut" } }}
-                      whileTap={{ scale: 0.99, transition: { duration: 0.1 } }}
+                      className="fade-up group relative rounded-2xl overflow-hidden cursor-default"
+                      style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: `${i * 0.04}s` }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = `${dc}55`; e.currentTarget.style.boxShadow = `0 8px 32px ${dc}18, 0 0 0 1px ${dc}22`; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = p.border; e.currentTarget.style.boxShadow = "none"; }}
                     >
@@ -499,7 +468,7 @@ export default function Employee() {
                           </span>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
@@ -511,16 +480,11 @@ export default function Employee() {
                 <p className="text-sm font-semibold" style={{ color: p.faint }}>{t("employee.noData")}</p>
               </div>
             )}
-          </motion.div>
+          </div>
         ) : (
-        <motion.div
-          key="table"
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-2xl overflow-hidden transition-colors duration-300"
-          style={{ background: p.cardBg, border: `1px solid ${p.border}` }}
+        <div
+          className="fade-up rounded-2xl overflow-hidden transition-colors duration-300"
+          style={{ background: p.cardBg, border: `1px solid ${p.border}`, animationDelay: "0.18s" }}
         >
           <table className="w-full text-sm">
             <thead>
@@ -536,18 +500,12 @@ export default function Employee() {
                 </th>
               </tr>
             </thead>
-            <motion.tbody
-              initial="hidden"
-              animate="visible"
-              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.032 } } }}
-            >
+            <tbody>
               {loading ? (
                 <SkeletonTable rows={limit} cols={7} />
               ) : data.length > 0 ? data.map((emp, i) => (
-                <motion.tr
+                <tr
                   key={emp.id}
-                  custom={i}
-                  variants={rowVariants}
                   className="group transition-colors duration-150"
                   style={{ borderBottom: `1px solid ${p.border}`, background: i % 2 === 0 ? p.cardBg : p.rowAlt }}
                   onMouseEnter={e => { e.currentTarget.style.background = p.rowHover; e.currentTarget.style.boxShadow = `inset 3px 0 0 ${deptColor(emp.departement)}80`; }}
@@ -628,7 +586,7 @@ export default function Employee() {
                       <DeleteButton label={t("common.delete")} confirmLabel={t("common.confirm")} onConfirm={() => handleDelete(emp.id)} />
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               )) : (
                 <tr>
                   <td colSpan={7} className="px-5 py-16 text-center">
@@ -641,17 +599,16 @@ export default function Employee() {
                   </td>
                 </tr>
               )}
-            </motion.tbody>
+            </tbody>
           </table>
-        </motion.div>
+        </div>
         )}
-        </AnimatePresence>
 
         {/* PAGINATION */}
         {totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-            className="flex items-center justify-center gap-1.5 mt-5"
+          <div
+            className="fade-up flex items-center justify-center gap-1.5 mt-5"
+            style={{ animationDelay: "0.3s" }}
           >
             <button
               onClick={() => currentPage > 1 && setParam("page", currentPage - 1)}
@@ -688,7 +645,7 @@ export default function Employee() {
             >
               <ChevronRight size={14} />
             </button>
-          </motion.div>
+          </div>
         )}
 
       </div>
@@ -707,16 +664,13 @@ export default function Employee() {
           className="flex flex-col gap-4"
         >
           <EmployeeForm formData={formData} onChange={(name, value) => setFormData(prev => ({ ...prev, [name]: value }))} />
-          <motion.button
+          <button
             type="submit"
             className="w-full py-3 rounded-xl text-sm font-black text-white"
             style={{ background: "#3b6fd4" }}
-            whileHover={{ scale: 1.012, backgroundColor: "#2f5cb8" }}
-            whileTap={{ scale: 0.985 }}
-            transition={{ duration: 0.15 }}
           >
             {isEdit ? t("employee.saveChanges") : t("employee.createEmployee")}
-          </motion.button>
+          </button>
         </form>
       </Drawer>
     </main>

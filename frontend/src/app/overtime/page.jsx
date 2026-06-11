@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import { Plus, Check, X, FileSpreadsheet, Clock } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import fetchWithAuth from "@/lib/fetchWithAuth";
@@ -105,8 +104,7 @@ export default function OvertimePage() {
         ) : (
           <div className="flex flex-col gap-3">
             {requests.map((r) => (
-              <motion.div key={r.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-2xl" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
+              <div key={r.id} className="fade-up p-4 rounded-2xl" style={{ background: p.cardBg, border: `1px solid ${p.border}` }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
                     <span className="text-[13px] font-black" style={{ color: p.text }}>
@@ -150,7 +148,7 @@ export default function OvertimePage() {
                 {r.status === "rejected" && r.reject_reason && (
                   <p className="text-[11px] mt-2" style={{ color: "#e06666" }}>Rejected: {r.reject_reason}</p>
                 )}
-              </motion.div>
+              </div>
             ))}
           </div>
         )}
