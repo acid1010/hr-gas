@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { ImageOff, LinkIcon, ChevronDown, UploadCloud, Loader2 } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import fetchWithAuth from "@/lib/fetchWithAuth";
@@ -152,22 +151,17 @@ const EmployeeForm = ({ formData, onChange }) => {
           </div>
 
           {/* Actual photo overlaid when URL exists */}
-          <AnimatePresence>
-            {previewSrc && !imgError && (
-              <motion.img
-                key={previewSrc}
-                src={previewSrc}
-                alt="Preview"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: imgLoaded ? 1 : 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="absolute inset-0 w-full h-full object-cover"
-                onLoad={() => setImgLoaded(true)}
-                onError={() => setImgError(true)}
-              />
-            )}
-          </AnimatePresence>
+          {previewSrc && !imgError && (
+            <img
+              key={previewSrc}
+              src={previewSrc}
+              alt="Preview"
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
+              style={{ opacity: imgLoaded ? 1 : 0 }}
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
+            />
+          )}
         </div>
 
         {/* Photo URL input */}
