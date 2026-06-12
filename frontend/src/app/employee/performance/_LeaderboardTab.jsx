@@ -1,6 +1,9 @@
 "use client";
-import { Award, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { useState } from "react";
+import { Award, ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { PerfBadge, ScoreBar, deptColor, getDrivePreview, RANK_COLORS } from "./_shared";
+
+const PAGE_SIZE = 25;
 
 function SortTh({ k, children, sortKey, sortDir, onSort, p }) {
   const active = sortKey === k;
@@ -20,6 +23,13 @@ function SortTh({ k, children, sortKey, sortDir, onSort, p }) {
 }
 
 export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, onSort }) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(Math.max(0, sorted.length - 3) / PAGE_SIZE);
+  const tableRows = sorted.slice(3 + page * PAGE_SIZE, 3 + (page + 1) * PAGE_SIZE);
+
+  // Reset page when sort changes
+  const handleSort = (k) => { setPage(0); onSort(k); };
+
   return (
     <div className="fade-up">
       {/* PODIUM — top 3 */}
@@ -84,14 +94,14 @@ export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, 
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.rank")}</th>
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.employee")}</th>
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.department")}</th>
-              <SortTh k="attendance_rate" sortKey={sortKey} sortDir={sortDir} onSort={onSort} p={p}>{t("performance.columns.attendance")}</SortTh>
+              <SortTh k="attendance_rate" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} p={p}>{t("performance.columns.attendance")}</SortTh>
               <th className="px-5 py-3.5 text-left text-[10px] font-black tracking-[0.18em] uppercase" style={{ color: p.faint }}>{t("performance.columns.perfRating")}</th>
-              <SortTh k="combined_score" sortKey={sortKey} sortDir={sortDir} onSort={onSort} p={p}>{t("performance.columns.combinedScore")}</SortTh>
+              <SortTh k="combined_score" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} p={p}>{t("performance.columns.combinedScore")}</SortTh>
             </tr>
           </thead>
           <tbody>
-            {sorted.length > 0 ? sorted.map((emp, i) => {
-              const rank = i + 1;
+            {sorted.length > 0 ? tableRows.map((emp, i) => {
+              const rank = 3 + page * PAGE_SIZE + i + 1;
               const rankColor = rank <= 3 ? RANK_COLORS[rank - 1] : p.faint;
               const isChamp = rank === 1;
               return (
@@ -102,7 +112,7 @@ export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, 
                     borderBottom: `1px solid ${p.border}`,
                     background: isChamp ? "rgba(245,158,11,0.04)" : i % 2 === 0 ? p.cardBg : p.rowAlt,
                     boxShadow: isChamp ? "inset 3px 0 0 #f59e0b" : undefined,
-                    animationDelay: `${i * 0.032}s`,
+                    animationDelay: `${i * 0.02}s`,
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = isChamp ? "rgba(245,158,11,0.08)" : p.rowHover; }}
                   onMouseLeave={e => { e.currentTarget.style.background = isChamp ? "rgba(245,158,11,0.04)" : i % 2 === 0 ? p.cardBg : p.rowAlt; }}
@@ -138,7 +148,7 @@ export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, 
                     <div className="flex flex-col gap-1 min-w-[72px]">
                       <span className="text-sm font-black tabular-nums" style={{ color: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444" }}>{emp.attendance_rate}%</span>
                       <div className="h-1 rounded-full overflow-hidden" style={{ background: p.border2, minWidth: 64 }}>
-                        <div className="h-full rounded-full score-bar-animated" style={{ background: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444", width: `${emp.attendance_rate}%`, animationDelay: `${i * 0.03 + 0.2}s` }} />
+                        <div className="h-full rounded-full score-bar-animated" style={{ background: emp.attendance_rate >= 80 ? "#22c55e" : emp.attendance_rate >= 60 ? "#f59e0b" : "#ef4444", width: `${emp.attendance_rate}%`, animationDelay: `${i * 0.02}s` }} />
                       </div>
                     </div>
                   </td>
@@ -160,6 +170,34 @@ export default function LeaderboardTab({ sorted, month, p, t, sortKey, sortDir, 
             )}
           </tbody>
         </table>
+
+        {/* PAGINATION */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: `1px solid ${p.border}` }}>
+            <span className="text-xs font-bold" style={{ color: p.faint }}>
+              {3 + page * PAGE_SIZE + 1}–{Math.min(3 + (page + 1) * PAGE_SIZE, sorted.length)} / {sorted.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="p-1.5 rounded-lg transition-all"
+                style={{ background: p.inputBg, color: page === 0 ? p.faint : p.text, opacity: page === 0 ? 0.35 : 1 }}
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="text-xs font-black tabular-nums" style={{ color: p.text }}>{page + 1} / {totalPages}</span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={page === totalPages - 1}
+                className="p-1.5 rounded-lg transition-all"
+                style={{ background: p.inputBg, color: page === totalPages - 1 ? p.faint : p.text, opacity: page === totalPages - 1 ? 0.35 : 1 }}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
