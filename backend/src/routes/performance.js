@@ -120,7 +120,7 @@ router.get("/leaderboard", async (req, res) => {
 
     data.sort((a, b) => b.combined_score - a.combined_score);
 
-    res.status(200).json({ month: targetMonth, working_days: workingDays, data });
+    res.status(200).json({ month: targetMonth, working_days: workingDays, checkins_count: checkIns.length, employees_with_punches: Object.keys(daysMap).length, data });
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
