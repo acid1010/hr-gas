@@ -39,5 +39,6 @@ services:
       - backend
     environment:
       JWT_SECRET: ${JWT_SECRET}
+      BACKEND_INTERNAL_URL: http://backend:3041
     ports:
       - "3040:3000"
