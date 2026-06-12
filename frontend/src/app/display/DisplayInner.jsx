@@ -275,8 +275,8 @@ function FocusCard({ employee, loaded, p }) {
           </div>
         </div>
 
-        <div className="rounded-3xl p-6" style={{ background: p.inputBg }}>
-          <div className="flex min-h-52 flex-col items-center justify-center text-center">
+        <div className="flex flex-1 flex-col rounded-3xl p-6" style={{ background: p.inputBg }}>
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
             <p className="text-2xl font-black uppercase tracking-[0.26em]" style={{ color: p.muted }}>
               Jam Absensi
             </p>
