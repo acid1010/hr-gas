@@ -569,7 +569,7 @@ export default function Display() {
             <QuotePanel quote={quote} p={p} />
           </div>
 
-          <aside className="col-span-12 flex min-h-0 flex-col rounded-[2rem] border p-6" style={{ background: p.cardBg, borderColor: p.border }}>
+          <aside className="col-span-12 rounded-[2rem] border p-6" style={{ background: p.cardBg, borderColor: p.border }}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: p.primary }}>
@@ -597,7 +597,7 @@ export default function Display() {
               </div>
             ) : null}
 
-            <div className="mt-5 grid min-h-0 flex-1 grid-rows-6 gap-3 overflow-hidden pr-1" style={{ scrollbarWidth: "none" }}>
+            <div className="mt-5 flex flex-col gap-3">
               {visibleQueue.map((employee, index) => {
                 const currentFocusKey = focusEmployee?.user_id || focusEmployee?.nik || focusEmployee?.name;
                 const rowKey = employee.user_id || employee.nik || employee.name;
