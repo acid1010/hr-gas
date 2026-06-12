@@ -3,6 +3,20 @@ const router = express.Router();
 const prisma = require("../../libs/prisma");
 const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
 
+router.get("/debug-attendance", async (req, res) => {
+  try {
+    const total   = await prisma.attendance.count();
+    const linked  = await prisma.attendance.count({ where: { user_id: { not: null } } });
+    const sample  = await prisma.attendance.findFirst({ where: { user_id: { not: null } } });
+    const nullSample = await prisma.attendance.findFirst({ where: { user_id: null } });
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const thisMonth = await prisma.attendance.count({ where: { punch_time: { gte: start, lt: end }, user_id: { not: null } } });
+    res.json({ total, linked, thisMonth, start, end, sample, nullSample });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 router.post("/post", async (req, res) => {
   const { user_id, quarter, status, description } = req.body;
 
