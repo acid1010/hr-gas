@@ -214,7 +214,7 @@ export default function Performance() {
           <div
             ref={pillRef}
             className="absolute top-1 bottom-1 rounded-lg transition-all duration-200 pointer-events-none"
-            style={{ background: "#1e2d52", left: 0, width: 0 }}
+            style={{ background: p.rowHover, left: 0, width: 0 }}
           />
           {tabs.map(({ key, label, Icon }) => (
             <button
