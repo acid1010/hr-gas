@@ -363,7 +363,12 @@ export default function Display() {
   const activeFocusIndex = visibleQueue.length ? focusIndex % visibleQueue.length : 0;
   const focusEmployee = visibleQueue[activeFocusIndex] || visibleQueue[0] || null;
   const realtime = realtimeStatusMeta(realtimeStatus);
-  const quote = MOTIVATIONAL_QUOTES[new Date().getDate() % MOTIVATIONAL_QUOTES.length];
+  const [quoteIndex, setQuoteIndex] = useState(() => new Date().getDate() % MOTIVATIONAL_QUOTES.length);
+  useEffect(() => {
+    const id = setInterval(() => setQuoteIndex((i) => (i + 1) % MOTIVATIONAL_QUOTES.length), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const quote = MOTIVATIONAL_QUOTES[quoteIndex];
 
   useEffect(() => {
     activeRef.current = true;
