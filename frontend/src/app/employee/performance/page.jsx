@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
@@ -10,8 +10,17 @@ import { Plus, Users, Award, TrendingUp } from "lucide-react";
 import { useAppSettings } from "@/lib/useAppSettings";
 import { toast } from "@/lib/toast";
 
-const LeaderboardTab = dynamic(() => import("./_LeaderboardTab"));
-const RecordsTab     = dynamic(() => import("./_RecordsTab"));
+function TabSkeleton() {
+  return (
+    <div
+      className="rounded-2xl animate-pulse"
+      style={{ background: "rgba(128,128,128,0.07)", border: "1px solid rgba(128,128,128,0.1)", height: 320 }}
+    />
+  );
+}
+
+const LeaderboardTab = dynamic(() => import("./_LeaderboardTab"), { loading: () => <TabSkeleton /> });
+const RecordsTab     = dynamic(() => import("./_RecordsTab"),     { loading: () => <TabSkeleton /> });
 
 export default function Performance() {
   const { t, p } = useAppSettings();
@@ -27,9 +36,11 @@ export default function Performance() {
   const [tab,            setTab]            = useState("leaderboard");
   const [statusFilter,   setStatusFilter]   = useState("");
   const [perfNameFilter, setPerfNameFilter] = useState("");
+  const [loadingLb,      setLoadingLb]      = useState(true);
 
-  const pillRef = useRef(null);
-  const tabRefs = useRef({});
+  const pillRef        = useRef(null);
+  const tabRefs        = useRef({});
+  const perfFetchedRef = useRef(false);
 
   const tabs = [
     { key: "leaderboard", label: t("performance.leaderboard"), Icon: Award },
@@ -45,10 +56,12 @@ export default function Performance() {
   }, [tab]);
 
   const loadLeaderboard = useCallback(async () => {
+    setLoadingLb(true);
     try {
       const res = await fetchWithAuth(`${apiBaseUrl}/api/performance/leaderboard?month=${month}`);
       setLeaderboard(res.data || []);
     } catch (err) { console.error(err); }
+    finally { setLoadingLb(false); }
   }, [month]);
 
   const loadPerf = useCallback(async () => {
@@ -59,7 +72,14 @@ export default function Performance() {
   }, []);
 
   useEffect(() => { loadLeaderboard(); }, [loadLeaderboard]);
-  useEffect(() => { loadPerf(); },        [loadPerf]);
+
+  // Fetch perf records only on first visit to Records tab
+  useEffect(() => {
+    if (tab === "records" && !perfFetchedRef.current) {
+      perfFetchedRef.current = true;
+      loadPerf();
+    }
+  }, [tab, loadPerf]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -74,7 +94,7 @@ export default function Performance() {
       e.target.reset();
       setDrawerOpen(false);
       loadLeaderboard();
-      loadPerf();
+      if (perfFetchedRef.current) loadPerf();
     } catch (err) { toast(err.message, "error"); }
   };
 
@@ -83,7 +103,7 @@ export default function Performance() {
       await fetchWithAuth(`${apiBaseUrl}/api/performance/delete/${id}`, { method: "DELETE" });
       toast(t("common.delete") + " — OK");
       loadLeaderboard();
-      loadPerf();
+      if (perfFetchedRef.current) loadPerf();
     } catch (err) { toast(err.message, "error"); }
   };
 
@@ -92,15 +112,22 @@ export default function Performance() {
     else { setSortKey(key); setSortDir(-1); }
   };
 
-  const sorted = [...leaderboard].sort((a, b) => sortDir * (b[sortKey] - a[sortKey]));
-  const filteredPerf = perfRecords.filter(r => {
-    if (statusFilter && (r.status || "").toLowerCase() !== statusFilter) return false;
-    if (perfNameFilter.trim()) {
-      const q = perfNameFilter.toLowerCase();
-      return (r.users?.name || "").toLowerCase().includes(q) || String(r.users?.nik || "").includes(q);
-    }
-    return true;
-  });
+  const sorted = useMemo(
+    () => [...leaderboard].sort((a, b) => sortDir * (b[sortKey] - a[sortKey])),
+    [leaderboard, sortKey, sortDir]
+  );
+
+  const filteredPerf = useMemo(
+    () => perfRecords.filter(r => {
+      if (statusFilter && (r.status || "").toLowerCase() !== statusFilter) return false;
+      if (perfNameFilter.trim()) {
+        const q = perfNameFilter.toLowerCase();
+        return (r.users?.name || "").toLowerCase().includes(q) || String(r.users?.nik || "").includes(q);
+      }
+      return true;
+    }),
+    [perfRecords, statusFilter, perfNameFilter]
+  );
 
   return (
     <main className="overflow-x-hidden w-full max-w-full">
@@ -140,7 +167,13 @@ export default function Performance() {
         </div>
 
         {/* KPI STRIP */}
-        {leaderboard.length > 0 && (
+        {loadingLb ? (
+          <div className="grid grid-cols-4 gap-3 mb-5">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="rounded-2xl animate-pulse" style={{ background: p.cardBg, border: `1px solid ${p.border}`, height: 82 }} />
+            ))}
+          </div>
+        ) : leaderboard.length > 0 && (
           <div className="grid grid-cols-4 gap-3 mb-5">
             {[
               { key: "best",    label: "Best",    color: "#22c55e", bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.18)"   },

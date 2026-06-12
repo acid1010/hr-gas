@@ -24,6 +24,7 @@ const allowedOrigin = [
   "http://localhost:3040",
   "http://192.128.66.69:3040",
   "http://36.93.58.122:3040",
+  "http://36.94.127.15:3040",
 ];
 const optionsCors = {
   origin: function (origin, callback) {

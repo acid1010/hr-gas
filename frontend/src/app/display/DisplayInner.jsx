@@ -359,7 +359,7 @@ export default function Display() {
   const attending = data.filter(e => e.last_punch !== null);
   const ranked = attending;
   useEffect(() => { rankedRef.current = ranked; }, [ranked]);
-  const visibleQueue = ranked.slice(0, 6);
+  const visibleQueue = ranked.slice(0, 3);
   const activeFocusIndex = visibleQueue.length ? focusIndex % visibleQueue.length : 0;
   const focusEmployee = visibleQueue[activeFocusIndex] || visibleQueue[0] || null;
   const realtime = realtimeStatusMeta(realtimeStatus);
@@ -445,7 +445,7 @@ export default function Display() {
         if (!activeRef.current) return;
         setData(nextData);
         if (focusUserId) {
-          const idx = nextData.slice(0, 6).findIndex((emp) => emp.user_id === focusUserId);
+          const idx = nextData.slice(0, 3).findIndex((emp) => emp.user_id === focusUserId);
           if (idx !== -1) setFocusIndex(idx);
         }
         setLoaded(true);

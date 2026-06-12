@@ -425,8 +425,8 @@ export default function Attendance() {
             {/* Punch type chips */}
             {[
               { key: null,  label: "All",       color: p.muted,   bg: p.inputBg },
-              { key: 0,     label: t("attendance.checkIn")  || "Check-in",  color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
-              { key: 1,     label: t("attendance.checkOut") || "Check-out", color: "#5b8df8", bg: "rgba(91,141,248,0.12)" },
+              { key: 0,     label: t("attendance.checkIn")  || "Masuk",  color: "#22c55e", bg: "rgba(34,197,94,0.12)"  },
+              { key: 1,     label: t("attendance.checkOut") || "Keluar", color: "#5b8df8", bg: "rgba(91,141,248,0.12)" },
             ].map(opt => {
               const active = punchTypeFilter === opt.key;
               return (
