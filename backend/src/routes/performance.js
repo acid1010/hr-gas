@@ -60,7 +60,7 @@ router.get("/leaderboard", async (req, res) => {
     });
 
     const checkIns = await prisma.attendance.findMany({
-      where: { punch_time: { gte: start, lt: end }, punch_type: 0, user_id: { not: null } },
+      where: { punch_time: { gte: start, lt: end }, user_id: { not: null } },
       select: { user_id: true, punch_time: true },
     });
 
