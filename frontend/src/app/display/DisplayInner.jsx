@@ -91,7 +91,7 @@ function getScoreTone(score) {
 
 function realtimeStatusMeta(status) {
   if (status === "live") return { label: "Live", helper: "Fingerprint aktif", color: "#16a34a" };
-  if (status === "offline") return { label: "Offline", helper: "Menunggu backend", color: "#dc2626" };
+  if (status === "offline") return { label: "Offline", helper: "Device tidak terhubung", color: "#dc2626" };
   return { label: "Menghubungkan", helper: "Mencari device", color: "#d97706" };
 }
 
@@ -174,7 +174,7 @@ function QuotePanel({ quote, p }) {
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex min-h-[22rem] overflow-hidden rounded-[2rem] border px-8 py-8"
+      className="relative flex h-full overflow-hidden rounded-[2rem] border px-8 py-8"
       style={{
         background: `linear-gradient(145deg, ${p.cardBg}, ${p.inputBg})`,
         borderColor: p.border,
@@ -211,7 +211,7 @@ function QuotePanel({ quote, p }) {
 function FocusCard({ employee, loaded, p }) {
   if (!loaded) {
     return (
-      <section className="flex h-full min-h-[28rem] items-center justify-center rounded-3xl border" style={{ background: p.cardBg, borderColor: p.border }}>
+      <section className="flex h-full items-center justify-center rounded-3xl border" style={{ background: p.cardBg, borderColor: p.border }}>
         <p className="text-sm font-bold" style={{ color: p.muted }}>
           Memuat papan peringkat
         </p>
@@ -221,7 +221,7 @@ function FocusCard({ employee, loaded, p }) {
 
   if (!employee) {
     return (
-      <section className="flex h-full min-h-[28rem] flex-col items-center justify-center rounded-3xl border px-8 text-center" style={{ background: p.cardBg, borderColor: p.border }}>
+      <section className="flex h-full flex-col items-center justify-center rounded-3xl border px-8 text-center" style={{ background: p.cardBg, borderColor: p.border }}>
         <p className="text-[11px] font-black uppercase tracking-[0.28em]" style={{ color: p.primary }}>
           Display Siap
         </p>
@@ -245,7 +245,7 @@ function FocusCard({ employee, loaded, p }) {
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="relative min-h-[22rem] overflow-hidden rounded-[2rem] border px-8 py-8"
+      className="relative h-full overflow-hidden rounded-[2rem] border px-8 py-8"
       style={{
         background: p.cardBg,
         borderColor: p.border,
@@ -395,7 +395,7 @@ export default function Display() {
       try {
         const event = JSON.parse(e.data);
         if (event.type === "status") {
-          setRealtimeStatus(event.connected ? "live" : "connecting");
+          setRealtimeStatus(event.connected ? "live" : "offline");
           return;
         }
         if (event.type !== "punch" || !event.user_id) return;
@@ -484,12 +484,13 @@ export default function Display() {
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden px-6 py-6"
+      className="relative h-screen overflow-hidden px-6 py-6"
       style={{
         background: p.pageBg,
         color: p.text,
         fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
         userSelect: "none",
+        cursor: "none",
       }}
     >
       <div
@@ -501,7 +502,7 @@ export default function Display() {
         }}
       />
 
-      <main className="relative z-10 grid min-h-[calc(100vh-3rem)] w-full max-w-full grid-rows-[auto_1fr] gap-5 overflow-x-hidden">
+      <main className="relative z-10 grid h-full w-full max-w-full grid-rows-[auto_1fr] gap-5 overflow-hidden">
         <header className="flex items-start justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm">
@@ -558,14 +559,14 @@ export default function Display() {
           </div>
         </header>
 
-        <section className="grid min-h-0 grid-flow-dense grid-cols-12 gap-5">
-          <div className="col-span-7 min-h-0">
+        <section className="grid min-h-0 h-full grid-flow-dense grid-cols-12 grid-rows-[1fr_auto] gap-5 overflow-hidden">
+          <div className="col-span-7 min-h-0 h-full">
             <AnimatePresence mode="wait">
               <FocusCard employee={focusEmployee} loaded={loaded} p={p} error={error} />
             </AnimatePresence>
           </div>
 
-          <div className="col-span-5 min-h-0">
+          <div className="col-span-5 min-h-0 h-full">
             <QuotePanel quote={quote} p={p} />
           </div>
 
@@ -626,8 +627,10 @@ export default function Display() {
       </main>
 
       <style>{`
-        ::-webkit-scrollbar {
-          display: none;
+        ::-webkit-scrollbar { display: none; }
+        html, body {
+          overflow: hidden !important;
+          height: 100%;
         }
       `}</style>
     </div>
