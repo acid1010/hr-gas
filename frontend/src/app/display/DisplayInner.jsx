@@ -389,7 +389,6 @@ export default function Display() {
 
   useEffect(() => {
     const es = new EventSource(`${apiBaseUrl}/api/attendance/realtime-display`);
-    es.onopen = () => setRealtimeStatus("connecting");
     es.onerror = () => setRealtimeStatus("offline");
     es.onmessage = (e) => {
       try {
