@@ -51,9 +51,10 @@ router.get("/display-latest", async (req, res) => {
   try {
     const { date, limit = 6 } = req.query;
     const start = date ? new Date(date) : new Date();
-    start.setHours(0, 0, 0, 0);
+    start.setHours(5, 0, 0, 0);
     const end = new Date(start);
     end.setDate(end.getDate() + 1);
+    end.setHours(5, 0, 0, 0);
 
     const records = await prisma.attendance.findMany({
       where: { punch_time: { gte: start, lt: end }, punch_type: 0, user_id: { not: null } },
