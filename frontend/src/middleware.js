@@ -6,7 +6,7 @@ export function middleware(request) {
   const reqHeaders = new Headers(request.headers);
   reqHeaders.set("x-pathname", pathname);
 
-  if (pathname.startsWith("/display")) {
+  if (pathname.startsWith("/display") || pathname.startsWith("/auth")) {
     return NextResponse.next({ request: { headers: reqHeaders } });
   }
 
