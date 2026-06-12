@@ -3,7 +3,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const BACKEND_INTERNAL = process.env.BACKEND_INTERNAL_URL || "http://backend:3041";
+const BACKEND_INTERNAL = "http://backend:3041";
 
 const nextConfig = {
   output: "standalone",
