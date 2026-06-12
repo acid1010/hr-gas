@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import fetchWithAuth from "@/lib/fetchWithAuth";
 import apiBaseUrl from "@/lib/urlEndPoint";
@@ -47,7 +47,7 @@ export default function Performance() {
     { key: "records",     label: t("performance.records"),     Icon: TrendingUp },
   ];
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const activeEl = tabRefs.current[tab];
     if (activeEl && pillRef.current) {
       pillRef.current.style.left  = activeEl.offsetLeft + "px";
