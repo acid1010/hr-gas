@@ -26,11 +26,17 @@ test("classifyPunchType returns masuk for first daily punch", async () => {
   assert.strictEqual(type, 0);
 });
 
-test("normalizeDevicePunchType accepts only explicit masuk or keluar", () => {
-  assert.strictEqual(normalizeDevicePunchType(0), 0);
+test("normalizeDevicePunchType only trusts explicit keluar (1)", () => {
+  // ZKTeco devices send 0 for every punch regardless of in/out, so 0 is
+  // treated as "unknown" and falls through to time-based inference.
+  // Only 1 (explicit check-out) is trusted.
+  assert.strictEqual(normalizeDevicePunchType(1), 1);
   assert.strictEqual(normalizeDevicePunchType("1"), 1);
+  assert.strictEqual(normalizeDevicePunchType(0), null);
   assert.strictEqual(normalizeDevicePunchType(2), null);
+  assert.strictEqual(normalizeDevicePunchType(null), null);
   assert.strictEqual(normalizeDevicePunchType(undefined), null);
+  assert.strictEqual(normalizeDevicePunchType(""), null);
 });
 
 test("classifyPunchType uses explicit device keluar before fallback", async () => {
