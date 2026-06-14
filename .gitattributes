@@ -1,0 +1,53 @@
+# Enforce LF line endings on text files that MUST stay LF for the Linux-based
+# container runtime to work — even when cloned on Windows with autocrlf=true.
+#
+# Why: Docker containers are Linux. Shell scripts, SQL migrations, Dockerfiles,
+# and YAML compose files break in subtle ways when CRLF sneaks in:
+#   - `#!/bin/sh\r` is read as a non-existent interpreter → "no such file"
+#   - psql parser is mostly tolerant, but some statements with dollar-quoting fail
+#   - YAML parsers occasionally choke on trailing \r in multi-line strings
+#
+# `text=auto eol=lf` = git stores LF, checks out LF on every platform.
+
+* text=auto eol=lf
+
+# Explicit overrides for files that absolutely must be LF
+*.sh        text eol=lf
+*.bash      text eol=lf
+*.sql       text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.json      text eol=lf
+*.js        text eol=lf
+*.mjs       text eol=lf
+*.cjs       text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.md        text eol=lf
+*.env       text eol=lf
+*.example   text eol=lf
+Dockerfile  text eol=lf
+.dockerignore text eol=lf
+.gitignore  text eol=lf
+
+# Binary files — never touch line endings
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.zip       binary
+*.tar       binary
+*.tgz       binary
+*.gz        binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.eot       binary
+*.otf       binary
+
+# patch-package patches: preserve exact byte content (line endings matter for
+# patch context matching) — treat as binary so .gitattributes never rewrites them.
+*.patch     binary
+patches/**  binary
