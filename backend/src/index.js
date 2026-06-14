@@ -12,6 +12,7 @@ const membersRoutes = require("./routes/members");
 const performanceRoutes = require("./routes/performance");
 const attendanceRoutes = require("./routes/attendance");
 const overtimeRoutes = require("./routes/overtime");
+const leaveRoutes = require("./routes/leave");
 const shiftsRoutes = require("./routes/shifts");
 const holidaysRoutes = require("./routes/holidays");
 const zkRealtime = require("./lib/zkRealtime");
@@ -89,6 +90,7 @@ app.use(
   performanceRoutes,
 );
 app.use("/api/overtime", authMiddleware, overtimeRoutes);
+app.use("/api/leave", authMiddleware, leaveRoutes);
 app.use("/api/shifts", authMiddleware, shiftsRoutes);
 app.use("/api/holidays", authMiddleware, holidaysRoutes);
 

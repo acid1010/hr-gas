@@ -30,6 +30,10 @@ model users {
   ot_submitted    overtime_request[] @relation("ot_submitter")
   ot_approved     overtime_request[] @relation("ot_approver")
   ot_lines        overtime_line[]    @relation("ot_worker")
+  leave_taken     leave_request[]    @relation("leave_taker")
+  leave_submitted leave_request[]    @relation("leave_submitter")
+  leave_approved  leave_request[]    @relation("leave_approver")
+  leave_balances  leave_balance[]
   performance     performance[]
   attendance      attendance[]
 }
@@ -104,4 +108,38 @@ model holiday {
   date       DateTime @unique @db.Date
   name       String?  @db.VarChar(255)
   created_at DateTime @default(now()) @db.Timestamp(6)
+}
+
+model leave_request {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String    @db.Uuid
+  submitted_by  String    @db.Uuid
+  leave_type    String    @db.VarChar(20)
+  start_date    DateTime  @db.Date
+  end_date      DateTime  @db.Date
+  days          Decimal   @db.Decimal(4, 1)
+  reason        String?   @db.VarChar(500)
+  status        String    @default("pending") @db.VarChar(20)
+  approved_by   String?   @db.Uuid
+  approved_at   DateTime? @db.Timestamp(6)
+  reject_reason String?   @db.VarChar(255)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @default(now()) @db.Timestamp(6)
+  taker         users     @relation("leave_taker", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  submitter     users     @relation("leave_submitter", fields: [submitted_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  approver      users?    @relation("leave_approver", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model leave_balance {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @db.Uuid
+  year       Int
+  leave_type String   @db.VarChar(20)
+  entitled   Decimal  @default(0) @db.Decimal(4, 1)
+  used       Decimal  @default(0) @db.Decimal(4, 1)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  updated_at DateTime @default(now()) @db.Timestamp(6)
+  user       users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, year, leave_type])
 }
