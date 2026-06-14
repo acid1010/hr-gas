@@ -185,13 +185,21 @@ This app is growing from a basic HR tool into an HRMS for a 500+ worker Indonesi
 
 ## Docker
 
+Two compose files at repo root:
+
+- `docker-compose.yml` — local dev. Brings up Redis + backend + frontend. Postgres is expected on the host (`host.docker.internal:5432`).
+- `docker-compose.prod.yml` — self-contained: Postgres + Redis + migration runner + backend + frontend. The `migrate` service applies every `backend/prisma/migrations/*/migration.sql` in lexical order on each `up` (idempotent — migrations all use `CREATE ... IF NOT EXISTS`).
+
 ```bash
-cp backend/.env.example backend/.env    # set JWT_SECRET, JWT_REFRESH, passwords
-docker compose up -d --build
-# After first boot, run the attendance migration:
-docker exec -i hr-postgres psql -U postgres -d hr \
-  < backend/prisma/migrations/20260605_add_attendance/migration.sql
+cp .env.example .env    # set JWT_SECRET, JWT_REFRESH, POSTGRES_PASSWORD, REDIS_PASSWORD, API_URL
+docker compose -f docker-compose.prod.yml up -d --build
+# Logs:
+docker compose -f docker-compose.prod.yml logs -f backend frontend
 ```
+
+**Image hardening:** both Dockerfiles use multi-stage builds, run as non-root `node` user, ship `dumb-init` as PID 1 (clean SIGTERM forwarding), declare `HEALTHCHECK`, and rely on BuildKit cache mounts for fast rebuilds. The backend installs `openssl` + `libc6-compat` for Prisma engines on alpine. Backend exposes `GET /healthz` (no DB / Redis hit) for the healthcheck.
+
+**Uploads** are persisted in the `backend-uploads` named volume (mounted at `/app/public/uploads`), not baked into the image.
 
 ---
 

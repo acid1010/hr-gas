@@ -1,3 +1,35 @@
+# Dependencies — must be installed inside the image
 node_modules
+npm-debug.log*
+
+# Build artifacts / generated client (regenerated inside image)
+src/generated
+
+# Local env / secrets — never bake into image
 .env
+.env.*
+!.env.example
+
+# Tests / dev-only — not needed at runtime
+tests
+**/*.test.js
+nodemon.json
+
+# VCS / editor / OS
+.git
+.gitignore
+.vscode
+.idea
+.DS_Store
+*.swp
+
+# Project meta — not needed at runtime
+README.md
+AGENTS.md
+CLAUDE.md
+docs
+
+# Misc
 *.log
+coverage
+.nyc_output

@@ -59,6 +59,13 @@ app.use(cors(optionsCors));
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ limit: "5mb", extended: true }));
 app.use(cookieParser());
+
+// Liveness probe — no DB / Redis dependency; just confirms the process is up.
+// Used by Docker HEALTHCHECK and any external load balancer.
+app.get("/healthz", (req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
 app.use("/uploads", (req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Content-Disposition", "attachment");
