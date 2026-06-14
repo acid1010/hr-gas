@@ -12,7 +12,7 @@ hr-gas/
 └── README.md         Setup instructions and API reference
 ```
 
-The old root-level `src/`, `libs/`, `prisma/` directories are **dead code** left from a previous structure — all active code is inside `backend/` and `frontend/`.
+All active code lives inside `backend/` and `frontend/`. Earlier root-level copies of `src/`, `libs/`, `prisma/`, and the root `package.json` / `prisma.config.ts` have been removed; do not recreate them at the root.
 
 ---
 
