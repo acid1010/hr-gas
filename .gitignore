@@ -17,3 +17,8 @@ AGENTS.md
 docs/.DS_Store
 docs/README.md
 docs/superpowers/plans/
+
+# Local-only artifacts (never commit)
+.codegraph/
+deploy.zip
+gas-human-resource-main/
