@@ -24,33 +24,10 @@ CREATE TABLE IF NOT EXISTS users (
   "deletedAt"  TIMESTAMP(6)
 );
 
-CREATE TABLE IF NOT EXISTS overtime_permit (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID REFERENCES users(id),
-  permission VARCHAR(255),
-  created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS overtime (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  overtime_permit_id UUID REFERENCES overtime_permit(id),
-  departement       VARCHAR(255),
-  dates             DATE,
-  shift             INTEGER,
-  created_at        TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-  updated_at        TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS overtime_detail (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID REFERENCES users(id),
-  necessary  VARCHAR(255),
-  start_time DATE,
-  end_time   DATE,
-  created_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP,
-  overtime_id UUID REFERENCES overtime(id)
-);
+-- NOTE: legacy overtime tables (overtime_permit / overtime / overtime_detail)
+-- were dropped in migration 20260607_overtime_module and replaced with
+-- overtime_request / overtime_line. They are intentionally not created here.
+-- Do NOT add them back to init.sql.
 
 CREATE TABLE IF NOT EXISTS attendance (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),

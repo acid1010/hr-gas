@@ -1,3 +1,17 @@
+-- ============================================================================
+-- ⚠️  RUN-ONCE DATA MIGRATION — DO NOT RE-APPLY
+-- ============================================================================
+-- This migration was applied on 2026-06-09 to correct attendance.punch_time
+-- values that had been written as WIB (UTC+7) wall-clock time into a UTC
+-- timestamp column. Re-running it would shift every row another 7 hours into
+-- the past and silently corrupt the table.
+--
+-- New attendance ingestion code (since this date) writes correct UTC, so this
+-- file exists only as a historical record. If you are bootstrapping a fresh
+-- DB, SKIP this migration entirely — apply 20260604_baseline through
+-- 20260608_shift_calendar, then jump to 20260610_leave_module.
+-- ============================================================================
+
 -- Fix attendance timestamps: previously stored as WIB values in UTC column (7h ahead).
 -- Subtract 7 hours to convert to correct UTC.
-UPDATE attendance SET punch_time = punch_time - INTERVAL '7 hours';
+-- UPDATE attendance SET punch_time = punch_time - INTERVAL '7 hours';
