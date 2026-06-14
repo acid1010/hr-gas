@@ -195,18 +195,18 @@ function QuotePanel({ quote, p }) {
       </div>
       <div className="relative grid h-full w-full grid-cols-[auto_1fr] items-center gap-7">
         <div className="h-full w-2 rounded-full" style={{ background: p.primary }} />
-        <div className=”relative flex min-h-64 items-center overflow-hidden”>
-          <span className=”absolute -left-2 -top-10 font-serif text-[9rem] font-black leading-none opacity-10” style={{ color: p.primary }}>
+        <div className="relative flex min-h-64 items-center overflow-hidden">
+          <span className="absolute -left-2 -top-10 font-serif text-[9rem] font-black leading-none opacity-10" style={{ color: p.primary }}>
             “
           </span>
-          <AnimatePresence mode=”wait”>
+          <AnimatePresence mode="wait">
             <motion.blockquote
               key={quote}
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -24 }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className=”relative max-w-2xl text-5xl font-black leading-[1.03] tracking-[-0.055em] text-balance”
+              className="relative max-w-2xl text-5xl font-black leading-[1.03] tracking-[-0.055em] text-balance"
               style={{ color: p.text }}
             >
               {quote}
