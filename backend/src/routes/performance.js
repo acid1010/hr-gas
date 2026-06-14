@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../../libs/prisma");
 const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
+const { computeCombinedScore, ratingForStatus } = require("../lib/performanceScore");
 
 router.get("/debug-attendance", async (req, res) => {
   try {
@@ -94,14 +95,12 @@ router.get("/leaderboard", async (req, res) => {
       if (!perfMap[p.user_id]) perfMap[p.user_id] = p;
     }
 
-    const ratingMap = { best: 1.0, good: 0.75, average: 0.5, worst: 0.25 };
-
     const data = employees.map((emp) => {
       const daysPresent = daysMap[emp.id]?.size || 0;
       const attendanceRate = workingDays > 0 ? daysPresent / workingDays : 0;
       const perf = perfMap[emp.id];
-      const perfRating = ratingMap[perf?.status?.toLowerCase()] ?? 0;
-      const combinedScore = Math.round((attendanceRate * 0.6 + perfRating * 0.4) * 100);
+      const perfRating = ratingForStatus(perf?.status);
+      const combinedScore = computeCombinedScore(attendanceRate, perfRating);
 
       return {
         user_id: emp.id,

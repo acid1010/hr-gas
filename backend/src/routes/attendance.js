@@ -6,6 +6,7 @@ const ExcelJS = require("exceljs");
 const { countWorkingDays, getHolidaySet } = require("../lib/workingDays");
 const { syncAttendanceFromDevice } = require("../lib/attendanceSync");
 const zkRealtime = require("../lib/zkRealtime");
+const { computeCombinedScoreFromPct, ratingPctForStatus } = require("../lib/performanceScore");
 
 const DEVICE_IP = process.env.ZK_IP || "192.128.69.33";
 const DEVICE_PORT = parseInt(process.env.ZK_PORT || "4370");
@@ -189,15 +190,13 @@ router.get("/report/excel", async (req, res) => {
     const perfMap = {};
     for (const p of performances) { if (!perfMap[p.user_id]) perfMap[p.user_id] = p; }
 
-    const ratingMap = { best: 100, good: 75, average: 50, worst: 25 };
-
     const rows = employees.map((emp) => {
       const daysPresent = daysMap[emp.id]?.size || 0;
       const daysAbsent = Math.max(0, workingDays - daysPresent);
       const attendancePct = workingDays > 0 ? Math.round((daysPresent / workingDays) * 100) : 0;
       const perf = perfMap[emp.id];
-      const perfRating = ratingMap[perf?.status?.toLowerCase()] ?? 0;
-      const combinedScore = Math.round((attendancePct / 100 * 0.6 + perfRating / 100 * 0.4) * 100);
+      const perfRating = ratingPctForStatus(perf?.status);
+      const combinedScore = computeCombinedScoreFromPct(attendancePct, perfRating);
       return {
         NIK: emp.nik ? String(emp.nik) : "",
         Nama: emp.name || "",
