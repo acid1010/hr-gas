@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Search, LayoutDashboard, Users, Fingerprint, TrendingUp, Clock,
+  Search, LayoutDashboard, Users, Fingerprint, TrendingUp, Clock, CalendarDays,
   ArrowRight, X, ChevronRight,
 } from "lucide-react";
 import fetchWithAuth from "@/lib/fetchWithAuth";
@@ -29,7 +29,8 @@ const NAV_ITEMS = [
   { label: "Employees",   href: "/employee",              icon: Users,           shortcut: "⌘2" },
   { label: "Attendance",  href: "/attendance",            icon: Fingerprint,     shortcut: "⌘3" },
   { label: "Performance", href: "/employee/performance",  icon: TrendingUp,      shortcut: "⌘4" },
-  { label: "Overtime",    href: "/overtime",              icon: Clock,           shortcut: "⌘5", badge: "Soon" },
+  { label: "Overtime",    href: "/overtime",              icon: Clock,           shortcut: "⌘5" },
+  { label: "Leave",       href: "/leave",                 icon: CalendarDays,    shortcut: "⌘6" },
 ];
 
 export default function CommandPalette() {

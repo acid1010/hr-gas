@@ -47,6 +47,9 @@ export default function Navbar() {
               <Link href="/overtime">Overtime</Link>
             </li>
             <li>
+              <Link href="/leave">Leave</Link>
+            </li>
+            <li>
               <Link href="/employee/performance">Performance</Link>
             </li>
             <li>
